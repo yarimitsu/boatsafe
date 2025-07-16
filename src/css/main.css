@@ -8,11 +8,12 @@
 }
 
 :root {
-    /* Colors */
-    --primary-blue: #1e40af;
+    /* Ocean Bight Brand Colors */
+    --primary-dark: #181f2a;
+    --primary-light: #f3f6fa;
+    --accent-yellow: #ffe082;
     --secondary-blue: #3b82f6;
     --light-blue: #eff6ff;
-    --dark-blue: #1e3a8a;
     --accent-teal: #0d9488;
     --warning-orange: #f59e0b;
     --error-red: #dc2626;
@@ -72,8 +73,8 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     line-height: 1.6;
-    color: var(--gray-800);
-    background-color: var(--gray-50);
+    color: var(--primary-light);
+    background-color: var(--primary-dark);
     min-height: 100vh;
 }
 
@@ -81,7 +82,16 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     line-height: 1.2;
     margin-bottom: var(--spacing-3);
-    color: var(--gray-900);
+    color: var(--primary-light);
+}
+
+/* Logo Styling */
+.logo {
+    height: 2rem;
+    width: auto;
+    margin-right: var(--spacing-3);
+    vertical-align: middle;
+    border-radius: 10px;
 }
 
 h1 { font-size: var(--font-size-3xl); }
