@@ -8,12 +8,14 @@
 }
 
 :root {
-    /* Ocean Bight Brand Colors */
-    --primary-dark: #181f2a;
-    --primary-light: #f3f6fa;
-    --accent-yellow: #ffe082;
-    --secondary-blue: #3b82f6;
-    --light-blue: #eff6ff;
+    /* Ocean Bight Marine Theme Colors */
+    --primary-blue: #a5d8ff;
+    --secondary-blue: #2c5d7c;
+    --glacier-blue: #183852;
+    --deep-ice-blue: #0d2c40;
+    --primary-light: #ffffff;
+    --text-light: rgba(255, 255, 255, 0.9);
+    --text-muted: rgba(255, 255, 255, 0.7);
     --accent-teal: #0d9488;
     --warning-orange: #f59e0b;
     --error-red: #dc2626;
@@ -32,7 +34,8 @@
     --gray-900: #111827;
     
     /* Typography */
-    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    --font-family-accent: 'Syne', sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
@@ -73,25 +76,51 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     line-height: 1.6;
-    color: var(--primary-light);
-    background-color: var(--primary-dark);
+    color: var(--text-light);
+    background: linear-gradient(135deg, var(--glacier-blue) 0%, var(--deep-ice-blue) 100%);
     min-height: 100vh;
+    margin: 0;
+    padding: 0;
 }
 
 h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-accent);
     font-weight: 600;
     line-height: 1.2;
     margin-bottom: var(--spacing-3);
-    color: var(--primary-light);
+    color: var(--primary-blue);
 }
 
 /* Logo Styling */
 .logo {
-    height: 2rem;
+    height: 1.5rem;
     width: auto;
-    margin-right: var(--spacing-3);
+    margin-right: var(--spacing-2);
     vertical-align: middle;
-    border-radius: 10px;
+    border-radius: 4px;
+}
+
+/* Mobile-responsive logo */
+@media (max-width: 768px) {
+    .logo {
+        height: 1.25rem;
+        margin-right: var(--spacing-2);
+    }
+    
+    .app-title {
+        font-size: var(--font-size-xl);
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        height: 1rem;
+        margin-right: var(--spacing-1);
+    }
+    
+    .app-title {
+        font-size: var(--font-size-lg);
+    }
 }
 
 h1 { font-size: var(--font-size-3xl); }
