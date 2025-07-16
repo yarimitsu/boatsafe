@@ -67,4 +67,7 @@ fs.mkdirSync(dataDir, { recursive: true });
 fs.copyFileSync(path.join(srcDir, 'data/zones.json'), path.join(dataDir, 'zones.json'));
 fs.copyFileSync(path.join(srcDir, 'data/endpoints.json'), path.join(dataDir, 'endpoints.json'));
 
+// Copy logo image
+fs.copyFileSync(path.join(srcDir, 'oceanbightlogo.png'), path.join(buildDir, 'oceanbightlogo.png'));
+
 console.log('Build process started...');
