@@ -12,8 +12,24 @@ if (fs.existsSync(buildDir)) {
 }
 fs.mkdirSync(buildDir, { recursive: true });
 
-// Copy and minify HTML
-const htmlContent = fs.readFileSync(path.join(srcDir, 'index.html'), 'utf8');
+// Copy and update HTML paths for production
+let htmlContent = fs.readFileSync(path.join(srcDir, 'index.html'), 'utf8');
+
+// Replace CSS links with minified version
+htmlContent = htmlContent.replace(
+  /<link rel="stylesheet" href="css\/main\.css">\s*<link rel="stylesheet" href="css\/widgets\.css">/,
+  '<link rel="stylesheet" href="styles.min.css">'
+);
+
+// Replace multiple script tags with single minified bundle
+const scriptReplace = htmlContent.match(/<!-- JavaScript -->\s*([\s\S]*?)(<\/body>)/);
+if (scriptReplace) {
+  htmlContent = htmlContent.replace(
+    scriptReplace[1],
+    '\n    <script src="app.min.js"></script>\n    '
+  );
+}
+
 fs.writeFileSync(path.join(buildDir, 'index.html'), htmlContent);
 
 // Minify and bundle CSS
