@@ -1,0 +1,32 @@
+{
+  "forecastZone": {
+    "baseUrl": "https://api.weather.gov/zones/forecast",
+    "format": "/{zoneId}/forecast",
+    "description": "NWS Forecast for Marine Zone"
+  },
+  "alerts": {
+    "baseUrl": "https://api.weather.gov/alerts",
+    "format": "?area=AK&urgency=Expected,Immediate&severity=Minor,Moderate,Severe,Extreme&status=Actual",
+    "description": "Marine Weather Alerts"
+  },
+  "tides": {
+    "baseUrl": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
+    "format": "?begin_date={date}&end_date={date}&station={station}&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&format=json",
+    "description": "Tide Predictions"
+  },
+  "observations": {
+    "baseUrl": "https://api.weather.gov/stations",
+    "format": "/{station}/observations/latest",
+    "description": "Weather Station Observations"
+  },
+  "discussion": {
+    "baseUrl": "https://api.weather.gov/products/types/AFD/locations",
+    "format": "/{office}",
+    "description": "Area Forecast Discussion"
+  },
+  "gridpoint": {
+    "baseUrl": "https://api.weather.gov/gridpoints",
+    "format": "/{office}/{gridX},{gridY}/forecast",
+    "description": "Gridpoint Forecast"
+  }
+}

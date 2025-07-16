@@ -1,0 +1,36 @@
+{
+  "name": "bight-watch",
+  "version": "1.0.0",
+  "description": "A Marine Forecast App for Alaska Waters",
+  "main": "src/js/app.js",
+  "scripts": {
+    "start": "cd src && live-server --host=0.0.0.0 --port=3000 --entry-file=index.html",
+    "build": "node scripts/build.js",
+    "deploy": "node scripts/deploy.js",
+    "test": "jest",
+    "lint": "eslint src/js/**/*.js",
+    "format": "prettier --write src/js/**/*.js src/css/**/*.css"
+  },
+  "keywords": [
+    "marine",
+    "weather",
+    "forecast",
+    "alaska",
+    "noaa"
+  ],
+  "author": "Ocean Bight",
+  "license": "MIT",
+  "devDependencies": {
+    "clean-css": "^5.3.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "live-server": "^1.2.0",
+    "prettier": "^2.8.0",
+    "terser": "^5.16.0"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "not dead",
+    "> 0.5%"
+  ]
+}

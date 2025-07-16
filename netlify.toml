@@ -1,0 +1,15 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+  functions = "functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://sage-syrniki-159054.netlify.app"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+    Access-Control-Max-Age = "86400"
