@@ -532,18 +532,24 @@ class BightWatchApp {
      * @returns {string|null} Station ID
      */
     getTideStation(zoneId) {
-        // Map current zone IDs to tide stations
+        // Map zone IDs to tide stations
         const stationMap = {
-            'PKZ011': '9452400', // Juneau - Southeast Alaska Inside Waters
-            'PKZ012': '9451054', // Sitka - Southeast Alaska Coastal Waters  
-            'PKZ013': '9451054', // Sitka - Southeast Alaska Offshore Waters
-            'PKZ021': '9455920', // Anchorage - Southcentral Alaska Inside Waters
-            'PKZ022': '9454050', // Valdez - Southcentral Alaska Coastal Waters
-            'PKZ031': '9459450', // Homer - Western Alaska Inside Waters
-            'PKZ032': '9453220', // Kodiak - Western Alaska Coastal Waters
-            'PKZ033': '9453220', // Kodiak - Bering Sea Waters
-            'PKZ034': '9453220', // Kodiak - Aleutian Waters
-            'PKZ035': '9453220'  // Kodiak - Arctic Ocean Waters
+            'PKZ011': '9452400', // Juneau
+            'PKZ012': '9451054', // Sitka 
+            'PKZ013': '9451054', // Sitka
+            'PKZ125': '9454050', // Valdez - Prince William Sound
+            'PKZ126': '9452400', // Juneau - Glacier Bay
+            'PKZ127': '9452400', // Juneau - Icy Strait
+            'PKZ128': '9451054', // Sitka - Cross Sound
+            'PKZ129': '9452400', // Juneau - Chatham Strait
+            'PKZ130': '9452400', // Juneau - Frederick Sound
+            'PKZ131': '9452400', // Juneau - Stephens Passage
+            'PKZ150': '9453220', // Kodiak
+            'PKZ170': '9455920', // Anchorage - Cook Inlet
+            'PKZ171': '9459450', // Homer - Kachemak Bay
+            'PKZ172': '9453220', // Kodiak - Shelikof Strait
+            'PKZ173': '9453220', // Kodiak
+            'PKZ174': '9453220'  // Kodiak - Alaska Peninsula
         };
         
         return stationMap[zoneId] || null;

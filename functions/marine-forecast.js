@@ -5,7 +5,8 @@
 
 // Valid Alaska marine zones - security whitelist
 const VALID_ZONES = new Set([
-  'PKZ011', 'PKZ012', 'PKZ013', 'PKZ021', 'PKZ022', 'PKZ031', 'PKZ032', 'PKZ033', 'PKZ034', 'PKZ035'
+  'PKZ011', 'PKZ012', 'PKZ013', 'PKZ125', 'PKZ126', 'PKZ127', 'PKZ128', 'PKZ129', 'PKZ130', 'PKZ131',
+  'PKZ150', 'PKZ170', 'PKZ171', 'PKZ172', 'PKZ173', 'PKZ174'
 ]);
 
 // Rate limiting store (in-memory for simplicity)
