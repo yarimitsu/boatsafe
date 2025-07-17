@@ -1,5 +1,98 @@
 /* Bight Watch - Widget-Specific CSS */
 
+/* Widget Headers with Logo */
+.widget-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-4);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--primary-light);
+}
+
+.widget-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+    .widget-header {
+        font-size: var(--font-size-lg);
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-3);
+    }
+    
+    .widget-logo {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Improve dropdown spacing on tablet */
+    .dropdown-container {
+        gap: var(--spacing-2);
+    }
+    
+    .zone-dropdown, .station-dropdown, .tide-station-dropdown, .weather-location-dropdown {
+        padding: var(--spacing-2) var(--spacing-3);
+        font-size: var(--font-size-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .widget-header {
+        font-size: var(--font-size-base);
+        gap: var(--spacing-2);
+    }
+    
+    .widget-logo {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Mobile-first dropdowns */
+    .dropdown-container {
+        gap: var(--spacing-1);
+    }
+    
+    .zone-dropdown, .station-dropdown, .tide-station-dropdown, .weather-location-dropdown {
+        padding: var(--spacing-2);
+        font-size: var(--font-size-sm);
+        min-height: 44px; /* Touch target size */
+    }
+    
+    .dropdown-label {
+        font-size: var(--font-size-xs);
+        margin-bottom: var(--spacing-1);
+    }
+    
+    /* Widget content spacing */
+    .forecast-content, .observations-content, .alerts-content, 
+    .discussion-content, .tides-content, .weather-content {
+        padding: var(--spacing-2);
+    }
+    
+    /* Forecast display optimization */
+    .forecast-period {
+        padding: var(--spacing-2);
+        margin-bottom: var(--spacing-2);
+    }
+    
+    .period-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-1);
+    }
+    
+    .forecast-text {
+        font-size: var(--font-size-sm);
+        line-height: 1.4;
+    }
+}
+
 /* Location Selector Widget */
 .location-content {
     display: flex;

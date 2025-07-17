@@ -73,8 +73,8 @@ function getClientIp(event) {
 }
 
 async function fetchWeatherData(zoneId) {
-  // Use the multi-zone URL for weather.gov
-  const url = `https://www.weather.gov/arh/lfpfcst.html?AJK=${zoneId}`;
+  // Use the multi-zone URL with all Alaska zones
+  const url = 'https://www.weather.gov/arh/lfpfcst.html?AJK=AKZ317&AJK=AKZ318&AJK=AKZ319&AJK=AKZ320&AJK=AKZ321&AJK=AKZ322&AJK=AKZ323&AJK=AKZ324&AJK=AKZ325&AJK=AKZ326&AJK=AKZ327&AJK=AKZ328&AJK=AKZ329&AJK=AKZ330&AJK=AKZ331&AJK=AKZ332';
   
   try {
     console.log(`Fetching weather forecast from: ${url}`);
@@ -90,8 +90,8 @@ async function fetchWeatherData(zoneId) {
       const html = await response.text();
       console.log(`Got weather HTML (${html.length} chars)`);
       
-      // Extract forecast text from HTML
-      const forecastText = extractForecastFromHTML(html, zoneId);
+      // Extract forecast text for specific zone from HTML
+      const forecastText = extractZoneForecastFromHTML(html, zoneId);
       
       // Return in consistent format
       return {
@@ -116,24 +116,32 @@ async function fetchWeatherData(zoneId) {
   }
 }
 
-function extractForecastFromHTML(html, zoneId) {
-  // Basic HTML parsing to extract forecast text
-  // Look for zone-specific content
+function extractZoneForecastFromHTML(html, zoneId) {
   try {
-    // Remove HTML tags and extract text content
-    let text = html.replace(/<[^>]*>/g, ' ');
+    // Look for zone-specific forecast in the HTML
+    // The page contains forecast data for each zone
+    
+    // First, try to find zone-specific content by looking for the zone ID
+    const zonePattern = new RegExp(`${zoneId}[\\s\\S]*?(?=${Object.keys(ZONE_NAMES).filter(z => z !== zoneId).join('|')}|$)`, 'i');
+    const zoneMatch = html.match(zonePattern);
+    
+    let text = zoneMatch ? zoneMatch[0] : html;
+    
+    // Remove HTML tags
+    text = text.replace(/<[^>]*>/g, ' ');
     
     // Clean up whitespace
     text = text.replace(/\s+/g, ' ').trim();
     
-    // Look for forecast patterns
+    // Look for forecast content patterns specific to zone
     const forecastPatterns = [
-      new RegExp(`${zoneId}[^.]*\\.`, 'gi'),
+      new RegExp(`${zoneId}[^\\n]*`, 'gi'),
       /TODAY[^.]*\./gi,
       /TONIGHT[^.]*\./gi,
       /TEMPERATURE[^.]*\./gi,
       /WIND[^.]*\./gi,
-      /SKY[^.]*\./gi
+      /SKY[^.]*\./gi,
+      /WEATHER[^.]*\./gi
     ];
     
     let extractedText = '';
@@ -145,15 +153,30 @@ function extractForecastFromHTML(html, zoneId) {
       }
     }
     
-    if (extractedText.trim()) {
+    // If we found zone-specific content, return it
+    if (extractedText.trim() && extractedText.length > 50) {
       return extractedText.trim();
     }
     
-    // Fallback: return first 500 characters of cleaned text
-    return text.substring(0, 500) + (text.length > 500 ? '...' : '');
+    // Fallback: look for general forecast content
+    const lines = text.split(/\n|\r\n/).filter(line => line.trim().length > 10);
+    const forecastLines = lines.filter(line => 
+      line.toLowerCase().includes('forecast') ||
+      line.toLowerCase().includes('weather') ||
+      line.toLowerCase().includes('temperature') ||
+      line.toLowerCase().includes('wind') ||
+      line.toLowerCase().includes('sky')
+    );
+    
+    if (forecastLines.length > 0) {
+      return forecastLines.slice(0, 3).join(' ').substring(0, 500);
+    }
+    
+    // Final fallback
+    return `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Visit weather.gov for detailed conditions.`;
     
   } catch (error) {
-    console.error('Error extracting forecast text:', error);
+    console.error('Error extracting zone forecast:', error);
     return `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId} - please visit weather.gov for full details.`;
   }
 }

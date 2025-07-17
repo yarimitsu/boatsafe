@@ -235,6 +235,48 @@ a:hover {
     border-bottom: 2px solid var(--glass-border);
 }
 
+/* Mobile Widget Optimizations */
+@media (max-width: 768px) {
+    .app-main {
+        padding: var(--spacing-4) 0;
+    }
+    
+    .widget-container {
+        margin-bottom: var(--spacing-6);
+    }
+    
+    .widget {
+        padding: var(--spacing-4);
+        border-radius: var(--border-radius);
+    }
+    
+    .widget h2 {
+        margin-bottom: var(--spacing-4);
+        padding-bottom: var(--spacing-2);
+    }
+}
+
+@media (max-width: 480px) {
+    .app-main {
+        padding: var(--spacing-3) 0;
+    }
+    
+    .widget-container {
+        margin-bottom: var(--spacing-4);
+    }
+    
+    .widget {
+        padding: var(--spacing-3);
+        margin: 0 var(--spacing-2);
+    }
+    
+    .widget h2 {
+        margin-bottom: var(--spacing-3);
+        padding-bottom: var(--spacing-2);
+        font-size: var(--font-size-lg);
+    }
+}
+
 /* Forms and Inputs */
 input[type="text"],
 input[type="search"],
