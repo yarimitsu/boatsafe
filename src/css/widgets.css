@@ -49,23 +49,26 @@
 
 .region-filter {
     padding: var(--spacing-2) var(--spacing-4);
-    border: var(--border-width) solid var(--gray-300);
-    background-color: white;
-    color: var(--gray-700);
+    border: var(--border-width) solid var(--glass-border);
+    background-color: var(--glass-bg);
+    color: var(--text-secondary);
     border-radius: var(--border-radius);
     font-size: var(--font-size-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
+    backdrop-filter: blur(5px);
 }
 
 .region-filter:hover {
-    background-color: var(--gray-50);
+    background-color: rgba(26, 63, 92, 0.8);
+    border-color: var(--ice-glow);
 }
 
 .region-filter.active {
-    background-color: var(--primary-blue);
-    color: white;
-    border-color: var(--primary-blue);
+    background-color: var(--primary-color);
+    color: var(--button-text-dark);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px var(--ice-glow);
 }
 
 .no-results {
@@ -92,7 +95,7 @@
 
 .forecast-location {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .forecast-updated {
@@ -108,9 +111,10 @@
 
 .forecast-period {
     padding: var(--spacing-4);
-    border: var(--border-width) solid var(--gray-200);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: var(--gray-50);
+    background-color: rgba(15, 37, 53, 0.4);
+    backdrop-filter: blur(5px);
 }
 
 .period-header {
@@ -122,7 +126,7 @@
 
 .period-name {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .period-time {
@@ -144,7 +148,7 @@
 
 .wind-speed {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .wind-description {
@@ -303,14 +307,15 @@
 
 .tide-station-dropdown {
     padding: var(--spacing-3) var(--spacing-4);
-    border: var(--border-width) solid var(--gray-300);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: white;
+    background-color: var(--glass-bg);
     font-size: var(--font-size-base);
     font-family: var(--font-family);
-    color: var(--gray-700);
+    color: var(--text-primary);
     cursor: pointer;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    backdrop-filter: blur(5px);
 }
 
 .tide-station-dropdown:focus {
@@ -329,7 +334,7 @@
 
 .tide-station-name {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
     margin-bottom: var(--spacing-3);
 }
 
@@ -341,20 +346,21 @@
 
 .tide-event {
     padding: var(--spacing-3);
-    border: var(--border-width) solid var(--gray-200);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: var(--gray-50);
+    background-color: rgba(15, 37, 53, 0.4);
+    backdrop-filter: blur(5px);
     text-align: center;
 }
 
 .tide-event.high {
     border-color: var(--accent-teal);
-    background-color: #f0fdfa;
+    background-color: rgba(13, 148, 136, 0.2);
 }
 
 .tide-event.low {
-    border-color: var(--gray-400);
-    background-color: var(--gray-100);
+    border-color: var(--text-secondary);
+    background-color: rgba(15, 37, 53, 0.6);
 }
 
 .tide-type {
@@ -366,7 +372,7 @@
 
 .tide-time {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
     margin: var(--spacing-1) 0;
 }
 
@@ -390,14 +396,15 @@
 
 .buoy-region-dropdown {
     padding: var(--spacing-3) var(--spacing-4);
-    border: var(--border-width) solid var(--gray-300);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: white;
+    background-color: var(--glass-bg);
     font-size: var(--font-size-base);
     font-family: var(--font-family);
-    color: var(--gray-700);
+    color: var(--text-primary);
     cursor: pointer;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    backdrop-filter: blur(5px);
 }
 
 .buoy-region-dropdown:focus {
@@ -418,9 +425,10 @@
 
 .observation-station {
     padding: var(--spacing-4);
-    border: var(--border-width) solid var(--gray-200);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: var(--gray-50);
+    background-color: rgba(15, 37, 53, 0.4);
+    backdrop-filter: blur(5px);
 }
 
 .station-header {
@@ -434,7 +442,7 @@
 
 .station-name {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .station-time {
@@ -461,7 +469,7 @@
 
 .observation-value {
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .observation-unit {
@@ -484,14 +492,15 @@
 
 .weather-location-dropdown {
     padding: var(--spacing-3) var(--spacing-4);
-    border: var(--border-width) solid var(--gray-300);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: white;
+    background-color: var(--glass-bg);
     font-size: var(--font-size-base);
     font-family: var(--font-family);
-    color: var(--gray-700);
+    color: var(--text-primary);
     cursor: pointer;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    backdrop-filter: blur(5px);
 }
 
 .weather-location-dropdown:focus {
@@ -512,9 +521,10 @@
 
 .weather-period {
     padding: var(--spacing-4);
-    border: var(--border-width) solid var(--gray-200);
+    border: var(--border-width) solid var(--glass-border);
     border-radius: var(--border-radius);
-    background-color: var(--gray-50);
+    background-color: rgba(15, 37, 53, 0.4);
+    backdrop-filter: blur(5px);
 }
 
 .weather-period-name {

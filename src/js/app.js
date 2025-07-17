@@ -163,39 +163,54 @@ class BightWatchApp {
         this.showStatus(`Loading forecast for ${zone.name}...`, 'loading');
 
         try {
-            // Load forecast data in parallel
+            // Load marine forecast first
+            const forecast = await this.loadCoastalForecast(zoneId, zone);
+            this.widgets.forecastSummary.update(forecast);
+
+            // Load other data with graceful fallbacks
             const promises = [
-                this.loadCoastalForecast(zoneId, zone),
-                this.loadDiscussion(zone.office),
-                this.loadAlerts(),
-                this.loadTides(zoneId),
-                this.loadObservations(zoneId)
+                this.loadDiscussion(zone.office).catch(() => null),
+                this.loadAlerts().catch(() => ({ features: [] })),
+                this.loadTides(zoneId).catch(() => null),
+                this.loadObservations(zoneId).catch(() => null)
             ];
 
             const results = await Promise.allSettled(promises);
 
             // Update widgets with results
             results.forEach((result, index) => {
-                if (result.status === 'fulfilled') {
+                if (result.status === 'fulfilled' && result.value) {
                     switch (index) {
-                        case 0: // Coastal forecast
-                            this.widgets.forecastSummary.update(result.value);
-                            break;
-                        case 1: // Discussion
+                        case 0: // Discussion
                             this.widgets.discussion.update(result.value);
                             break;
-                        case 2: // Alerts
+                        case 1: // Alerts
                             this.widgets.alerts.update(result.value);
                             break;
-                        case 3: // Tides
+                        case 2: // Tides
                             this.widgets.tides.update(result.value);
                             break;
-                        case 4: // Observations
+                        case 3: // Observations
                             this.widgets.observations.update(result.value);
                             break;
                     }
                 } else {
                     console.warn(`Failed to load data for widget ${index}:`, result.reason);
+                    // Show placeholder message instead of error
+                    switch (index) {
+                        case 0:
+                            this.widgets.discussion.showError('Discussion not available - using cached forecast data');
+                            break;
+                        case 1:
+                            this.widgets.alerts.showNoAlerts();
+                            break;
+                        case 2:
+                            this.widgets.tides.showDefault();
+                            break;
+                        case 3:
+                            this.widgets.observations.showError('Observation data not available - check individual buoy websites');
+                            break;
+                    }
                 }
             });
 
@@ -214,8 +229,9 @@ class BightWatchApp {
      * @returns {Promise} Parsed forecast data
      */
     async loadCoastalForecast(zoneId, zone) {
-        // Use Netlify proxy to get marine forecast data
-        const proxyUrl = `https://sage-syrniki-159054.netlify.app/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
+        // Use current Netlify deployment proxy to get marine forecast data
+        const currentHost = window.location.origin;
+        const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
         
         try {
             console.log(`Fetching forecast via proxy:`, proxyUrl);
@@ -462,11 +478,18 @@ class BightWatchApp {
      * @returns {string|null} Station ID
      */
     getTideStation(zoneId) {
-        // This would be populated with actual station mappings
+        // Map current zone IDs to tide stations
         const stationMap = {
-            'PKZ125': '9452400', // Juneau
-            'PKZ150': '9454050', // Valdez
-            'PKZ170': '9455920'  // Anchorage
+            'PKZ011': '9452400', // Juneau - Southeast Alaska Inside Waters
+            'PKZ012': '9451054', // Sitka - Southeast Alaska Coastal Waters  
+            'PKZ013': '9451054', // Sitka - Southeast Alaska Offshore Waters
+            'PKZ021': '9455920', // Anchorage - Southcentral Alaska Inside Waters
+            'PKZ022': '9454050', // Valdez - Southcentral Alaska Coastal Waters
+            'PKZ031': '9459450', // Homer - Western Alaska Inside Waters
+            'PKZ032': '9453220', // Kodiak - Western Alaska Coastal Waters
+            'PKZ033': '9453220', // Kodiak - Bering Sea Waters
+            'PKZ034': '9453220', // Kodiak - Aleutian Waters
+            'PKZ035': '9453220'  // Kodiak - Arctic Ocean Waters
         };
         
         return stationMap[zoneId] || null;
@@ -478,11 +501,18 @@ class BightWatchApp {
      * @returns {Array} Station IDs
      */
     getBuoyStations(zoneId) {
-        // This would be populated with actual station mappings
+        // Map current zone IDs to buoy stations
         const stationMap = {
-            'PKZ125': ['46082'],
-            'PKZ150': ['46060'],
-            'PKZ170': ['46001']
+            'PKZ011': ['46082'], // Southeast Alaska Inside Waters
+            'PKZ012': ['46082'], // Southeast Alaska Coastal Waters
+            'PKZ013': ['46082'], // Southeast Alaska Offshore Waters  
+            'PKZ021': ['46060'], // Southcentral Alaska Inside Waters
+            'PKZ022': ['46060'], // Southcentral Alaska Coastal Waters
+            'PKZ031': ['46001'], // Western Alaska Inside Waters
+            'PKZ032': ['46001'], // Western Alaska Coastal Waters
+            'PKZ033': ['46001'], // Bering Sea Waters
+            'PKZ034': ['46001'], // Aleutian Waters
+            'PKZ035': ['46001']  // Arctic Ocean Waters
         };
         
         return stationMap[zoneId] || [];

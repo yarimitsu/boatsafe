@@ -107,7 +107,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400'
@@ -121,7 +121,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+        'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ error: 'Method not allowed' })
@@ -136,7 +136,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 429,
         headers: {
-          'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+          'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
@@ -154,7 +154,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+          'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
@@ -173,7 +173,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers: {
-          'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+          'Access-Control-Allow-Origin': '*',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
@@ -189,7 +189,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+        'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=1800' // 30 minutes
       },
@@ -202,7 +202,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': 'https://sage-syrniki-159054.netlify.app',
+        'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ 

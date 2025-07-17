@@ -1,6 +1,6 @@
 {
   "forecastZone": {
-    "baseUrl": "https://api.weather.gov/zones/forecast",
+    "baseUrl": "https://api.weather.gov/zones/marine",
     "format": "/{zoneId}/forecast",
     "description": "NWS Forecast for Marine Zone"
   },

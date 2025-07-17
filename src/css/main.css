@@ -9,13 +9,26 @@
 
 :root {
     /* Ocean Bight Marine Theme Colors */
+    --primary-color: #a5d8ff;
+    --secondary-color: #2c5d7c;
+    --accent-color: #e8f4ff;
+    --glacier-blue: #183852;
+    --deep-ice: #0d2c40;
+    --ice-glow: rgba(165, 216, 255, 0.5);
+    --text-primary: #f0f8ff;
+    --text-secondary: #c0d6e8;
+    --glass-bg: rgba(26, 63, 92, 0.65);
+    --glass-border: rgba(165, 216, 255, 0.2);
+    --sidebar-bg: #0f2535;
+    --button-text-dark: #183852;
+    
+    /* Legacy colors for compatibility */
     --primary-blue: #a5d8ff;
     --secondary-blue: #2c5d7c;
-    --glacier-blue: #183852;
     --deep-ice-blue: #0d2c40;
-    --primary-light: #ffffff;
-    --text-light: rgba(255, 255, 255, 0.9);
-    --text-muted: rgba(255, 255, 255, 0.7);
+    --primary-light: #f0f8ff;
+    --text-light: #f0f8ff;
+    --text-muted: #c0d6e8;
     --accent-teal: #0d9488;
     --warning-orange: #f59e0b;
     --error-red: #dc2626;
@@ -76,11 +89,14 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     line-height: 1.6;
-    color: var(--text-light);
-    background: linear-gradient(135deg, var(--glacier-blue) 0%, var(--deep-ice-blue) 100%);
+    color: var(--text-primary);
+    background: linear-gradient(135deg, var(--glacier-blue), var(--deep-ice));
     min-height: 100vh;
     margin: 0;
     padding: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -93,7 +109,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Logo Styling */
 .logo {
-    height: 1.5rem;
+    height: 3.375rem;
     width: auto;
     margin-right: var(--spacing-2);
     vertical-align: middle;
@@ -103,7 +119,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Mobile-responsive logo */
 @media (max-width: 768px) {
     .logo {
-        height: 1.25rem;
+        height: 2.8125rem;
         margin-right: var(--spacing-2);
     }
     
@@ -114,7 +130,7 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 480px) {
     .logo {
-        height: 1rem;
+        height: 2.25rem;
         margin-right: var(--spacing-1);
     }
     
@@ -158,10 +174,11 @@ a:hover {
 
 /* Header */
 .app-header {
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-    color: white;
+    background: linear-gradient(rgba(24, 56, 82, 0.85), rgba(13, 44, 64, 0.95));
+    color: var(--text-primary);
     padding: var(--spacing-6) 0;
     box-shadow: var(--shadow-lg);
+    border-bottom: 1px solid var(--glass-border);
 }
 
 .app-title {
@@ -171,7 +188,9 @@ a:hover {
     font-size: var(--font-size-3xl);
     font-weight: 700;
     margin-bottom: var(--spacing-2);
-    color: white;
+    color: var(--accent-color);
+    text-shadow: 0 0 10px var(--ice-glow);
+    font-family: var(--font-family-accent);
 }
 
 .logo {
@@ -180,7 +199,7 @@ a:hover {
 
 .app-subtitle {
     font-size: var(--font-size-lg);
-    opacity: 0.9;
+    color: var(--text-secondary);
     margin-bottom: 0;
 }
 
@@ -196,11 +215,12 @@ a:hover {
 }
 
 .widget {
-    background: white;
+    background: var(--glass-bg);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-md);
     padding: var(--spacing-6);
-    border: var(--border-width) solid var(--gray-200);
+    border: var(--border-width) solid var(--glass-border);
+    backdrop-filter: blur(10px);
     transition: box-shadow var(--transition-normal);
 }
 
@@ -209,10 +229,10 @@ a:hover {
 }
 
 .widget h2 {
-    color: var(--primary-blue);
+    color: var(--primary-color);
     margin-bottom: var(--spacing-5);
     padding-bottom: var(--spacing-3);
-    border-bottom: 2px solid var(--light-blue);
+    border-bottom: 2px solid var(--glass-border);
 }
 
 /* Forms and Inputs */

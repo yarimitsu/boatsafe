@@ -1,132 +1,52 @@
 {
-  "PKZ125": {
-    "name": "Lynn Canal",
+  "PKZ011": {
+    "name": "Southeast Alaska Inside Waters from Dixon Entrance to Skagway",
     "office": "AJK",
     "region": "Southeast Alaska"
   },
-  "PKZ126": {
-    "name": "Glacier Bay",
+  "PKZ012": {
+    "name": "Southeast Alaska Coastal Waters from Dixon Entrance to Cape Fairweather",
     "office": "AJK", 
     "region": "Southeast Alaska"
   },
-  "PKZ127": {
-    "name": "Icy Strait",
+  "PKZ013": {
+    "name": "Southeast Alaska Offshore Waters from Dixon Entrance to Cape Fairweather",
     "office": "AJK",
     "region": "Southeast Alaska"
   },
-  "PKZ128": {
-    "name": "Cross Sound",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ129": {
-    "name": "Chatham Strait",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ130": {
-    "name": "Frederick Sound",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ131": {
-    "name": "Stephens Passage",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ132": {
-    "name": "Clarence Strait",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ133": {
-    "name": "Eastern Behm Canal",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ134": {
-    "name": "Western Behm Canal",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ135": {
-    "name": "Coastal Waters from Cape Fairweather to Lisianski Strait",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ136": {
-    "name": "Coastal Waters from Lisianski Strait to Cape Edgecumbe",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ137": {
-    "name": "Coastal Waters from Cape Edgecumbe to Coronation Island",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ138": {
-    "name": "Coastal Waters from Coronation Island to Point Baker",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ139": {
-    "name": "Coastal Waters from Point Baker to Cape Decision",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ140": {
-    "name": "Coastal Waters from Cape Decision to Dall Island",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ141": {
-    "name": "Coastal Waters from Dall Island to Cape Muzon",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ150": {
-    "name": "Prince William Sound",
+  "PKZ021": {
+    "name": "Southcentral Alaska Inside Waters",
     "office": "AFC",
     "region": "Southcentral Alaska"
   },
-  "PKZ151": {
-    "name": "Copper River Delta",
+  "PKZ022": {
+    "name": "Southcentral Alaska Coastal Waters",
     "office": "AFC",
     "region": "Southcentral Alaska"
   },
-  "PKZ152": {
-    "name": "Coastal Waters from Hinchinbrook Entrance to Cape Fairweather",
+  "PKZ031": {
+    "name": "Western Alaska Inside Waters", 
     "office": "AFC",
-    "region": "Southcentral Alaska"
+    "region": "Western Alaska"
   },
-  "PKZ170": {
-    "name": "Cook Inlet",
+  "PKZ032": {
+    "name": "Western Alaska Coastal Waters",
     "office": "AFC",
-    "region": "Southcentral Alaska"
+    "region": "Western Alaska"
   },
-  "PKZ171": {
-    "name": "Kachemak Bay",
+  "PKZ033": {
+    "name": "Bering Sea Waters",
     "office": "AFC",
-    "region": "Southcentral Alaska"
+    "region": "Western Alaska"
   },
-  "PKZ172": {
-    "name": "Shelikof Strait",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
+  "PKZ034": {
+    "name": "Aleutian Waters",
+    "office": "AFC", 
+    "region": "Western Alaska"
   },
-  "PKZ173": {
-    "name": "Kodiak Island Coastal Waters",
+  "PKZ035": {
+    "name": "Arctic Ocean Waters",
     "office": "AFC",
-    "region": "Southcentral Alaska"
-  },
-  "PKZ174": {
-    "name": "Alaska Peninsula Waters",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
-  },
-  "PKZ175": {
-    "name": "Aleutian Chain Waters",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
+    "region": "Arctic Alaska"
   }
 }
