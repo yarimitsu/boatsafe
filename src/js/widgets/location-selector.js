@@ -5,12 +5,10 @@ class LocationSelector {
     constructor(zones, onSelectionCallback) {
         this.zones = zones;
         this.onSelection = onSelectionCallback;
-        this.selectedZone = null;
-        this.filteredZones = { ...zones };
+        this.selectedRegion = null;
         
         this.container = document.getElementById('location-selector');
-        this.dropdown = document.getElementById('zone-dropdown');
-        this.regionFilters = document.querySelectorAll('.region-filter');
+        this.regionDropdown = document.getElementById('region-dropdown');
         
         this.init();
     }
@@ -20,156 +18,105 @@ class LocationSelector {
      */
     init() {
         this.setupEventListeners();
-        this.populateDropdown();
+        this.populateRegionDropdown();
     }
 
     /**
      * Set up event listeners
      */
     setupEventListeners() {
-        // Dropdown selection
-        if (this.dropdown) {
-            this.dropdown.addEventListener('change', (e) => {
-                const zoneId = e.target.value;
-                if (zoneId) {
-                    this.selectZone(zoneId);
+        // Region dropdown selection
+        if (this.regionDropdown) {
+            this.regionDropdown.addEventListener('change', (e) => {
+                const regionId = e.target.value;
+                if (regionId) {
+                    this.selectRegion(regionId);
                 } else {
                     this.clearSelection();
                 }
             });
         }
-
-        // Region filters
-        this.regionFilters.forEach(filter => {
-            filter.addEventListener('click', (e) => {
-                this.setActiveRegion(e.target.dataset.region);
-            });
-        });
     }
 
     /**
-     * Populate dropdown with zones
+     * Populate dropdown with regions
      */
-    populateDropdown() {
-        if (!this.dropdown) return;
+    populateRegionDropdown() {
+        if (!this.regionDropdown || !this.zones.regions) return;
 
-        const zones = Object.entries(this.filteredZones);
+        const regions = Object.entries(this.zones.regions);
         
         // Clear existing options (except the first placeholder)
-        this.dropdown.innerHTML = '<option value="">Select a zone...</option>';
+        this.regionDropdown.innerHTML = '<option value="">Select a region...</option>';
         
-        if (zones.length === 0) {
-            this.dropdown.innerHTML = '<option value="">No zones available</option>';
-            return;
-        }
-
-        // Sort zones by name
-        zones.sort((a, b) => a[1].name.localeCompare(b[1].name));
-
-        // Add zones to dropdown
-        zones.forEach(([id, zone]) => {
+        // Add regions to dropdown
+        regions.forEach(([id, region]) => {
             const option = document.createElement('option');
             option.value = id;
-            option.textContent = `${zone.name} (${id})`;
-            option.dataset.region = zone.region;
-            this.dropdown.appendChild(option);
+            option.textContent = region.name;
+            this.regionDropdown.appendChild(option);
         });
     }
 
     /**
-     * Set active region filter
-     * @param {string} region - Region name or 'all'
+     * Select a region
+     * @param {string} regionId - Region ID
      */
-    setActiveRegion(region) {
-        // Update filter buttons
-        this.regionFilters.forEach(filter => {
-            filter.classList.remove('active');
-            if (filter.dataset.region === region) {
-                filter.classList.add('active');
-            }
-        });
-
-        // Filter zones by region
-        if (region === 'all') {
-            this.filteredZones = { ...this.zones };
-        } else {
-            this.filteredZones = {};
-            
-            Object.entries(this.zones).forEach(([id, zone]) => {
-                if (zone.region === region) {
-                    this.filteredZones[id] = zone;
-                }
-            });
-        }
-        
-        // Clear current selection if it's not in the filtered zones
-        if (this.selectedZone && !this.filteredZones[this.selectedZone]) {
-            this.clearSelection();
-        }
-        
-        this.populateDropdown();
-    }
-
-
-    /**
-     * Select a zone
-     * @param {string} zoneId - Zone ID
-     */
-    selectZone(zoneId) {
-        if (!this.zones[zoneId]) {
-            console.error('Invalid zone ID:', zoneId);
+    selectRegion(regionId) {
+        if (!this.zones.regions[regionId]) {
+            console.error('Invalid region ID:', regionId);
             return;
         }
 
         // Update selection
-        this.selectedZone = zoneId;
+        this.selectedRegion = regionId;
         
         // Update dropdown
-        if (this.dropdown) {
-            this.dropdown.value = zoneId;
+        if (this.regionDropdown) {
+            this.regionDropdown.value = regionId;
         }
 
-        // Notify callback
+        // Notify callback with region data
         if (this.onSelection) {
-            this.onSelection(zoneId);
+            this.onSelection(regionId);
         }
     }
 
     /**
-     * Set selected zone (external API)
-     * @param {string} zoneId - Zone ID
+     * Set selected region (external API)
+     * @param {string} regionId - Region ID
      */
-    setSelected(zoneId) {
-        this.selectZone(zoneId);
+    setSelected(regionId) {
+        this.selectRegion(regionId);
     }
 
     /**
-     * Get selected zone
-     * @returns {string|null} Selected zone ID
+     * Get selected region
+     * @returns {string|null} Selected region ID
      */
     getSelected() {
-        return this.selectedZone;
+        return this.selectedRegion;
     }
 
     /**
      * Clear selection
      */
     clearSelection() {
-        this.selectedZone = null;
+        this.selectedRegion = null;
         
         // Reset dropdown
-        if (this.dropdown) {
-            this.dropdown.value = '';
+        if (this.regionDropdown) {
+            this.regionDropdown.value = '';
         }
     }
 
     /**
-     * Get zone data
-     * @param {string} zoneId - Zone ID
-     * @returns {Object|null} Zone data
+     * Get region data
+     * @param {string} regionId - Region ID
+     * @returns {Object|null} Region data
      */
-    getZoneData(zoneId) {
-        return this.zones[zoneId] || null;
+    getRegionData(regionId) {
+        return this.zones.regions[regionId] || null;
     }
 
     /**
@@ -178,8 +125,7 @@ class LocationSelector {
      */
     updateZones(zones) {
         this.zones = zones;
-        this.filteredZones = { ...zones };
-        this.populateDropdown();
+        this.populateRegionDropdown();
     }
 }
 

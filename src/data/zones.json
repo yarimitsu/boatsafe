@@ -1,82 +1,34 @@
 {
-  "PKZ011": {
-    "name": "Southeast Alaska Inside Waters from Dixon Entrance to Skagway",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ012": {
-    "name": "Southeast Alaska Coastal Waters from Dixon Entrance to Cape Fairweather",
-    "office": "AJK", 
-    "region": "Southeast Alaska"
-  },
-  "PKZ013": {
-    "name": "Southeast Alaska Offshore Waters from Dixon Entrance to Cape Fairweather",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ125": {
-    "name": "Prince William Sound",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
-  },
-  "PKZ126": {
-    "name": "Glacier Bay",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ127": {
-    "name": "Icy Strait",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ128": {
-    "name": "Cross Sound",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ129": {
-    "name": "Chatham Strait",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ130": {
-    "name": "Frederick Sound",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ131": {
-    "name": "Stephens Passage",
-    "office": "AJK",
-    "region": "Southeast Alaska"
-  },
-  "PKZ150": {
-    "name": "South of the Alaska Peninsula Sitkinak to Castle Cape",
-    "office": "AFC",
-    "region": "Alaska Peninsula"
-  },
-  "PKZ170": {
-    "name": "Cook Inlet",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
-  },
-  "PKZ171": {
-    "name": "Kachemak Bay",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
-  },
-  "PKZ172": {
-    "name": "Shelikof Strait",
-    "office": "AFC",
-    "region": "Southcentral Alaska"
-  },
-  "PKZ173": {
-    "name": "Kodiak Island Coastal Waters",
-    "office": "AFC",
-    "region": "Kodiak Island"
-  },
-  "PKZ174": {
-    "name": "Alaska Peninsula Waters",
-    "office": "AFC",
-    "region": "Alaska Peninsula"
+  "regions": {
+    "southeast": {
+      "name": "Southeast Alaska",
+      "forecastFile": "FZAK51.PAJK",
+      "office": "AJK",
+      "zones": {
+        "PKZ011": "Southeast Alaska Inside Waters from Dixon Entrance to Skagway",
+        "PKZ012": "Southeast Alaska Coastal Waters from Dixon Entrance to Cape Fairweather", 
+        "PKZ013": "Southeast Alaska Offshore Waters from Dixon Entrance to Cape Fairweather",
+        "PKZ126": "Glacier Bay",
+        "PKZ127": "Icy Strait",
+        "PKZ128": "Cross Sound",
+        "PKZ129": "Chatham Strait",
+        "PKZ130": "Frederick Sound",
+        "PKZ131": "Stephens Passage"
+      }
+    },
+    "southcentral": {
+      "name": "Southcentral Alaska",
+      "forecastFile": "FZAK51.PAFC",
+      "office": "AFC",
+      "zones": {
+        "PKZ125": "Prince William Sound",
+        "PKZ170": "Cook Inlet",
+        "PKZ171": "Kachemak Bay",
+        "PKZ172": "Shelikof Strait",
+        "PKZ173": "Kodiak Island Coastal Waters",
+        "PKZ174": "Alaska Peninsula Waters",
+        "PKZ150": "South of the Alaska Peninsula Sitkinak to Castle Cape"
+      }
+    }
   }
 }

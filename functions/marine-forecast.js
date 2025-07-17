@@ -56,12 +56,15 @@ function getClientIp(event) {
 }
 
 async function fetchNOAAData(zoneId) {
-  // Use NOAA text forecast endpoint
-  const zonePrefix = zoneId.substring(0, 2).toLowerCase(); // pkz -> pk
-  const url = `https://tgftp.nws.noaa.gov/data/forecasts/marine/coastal/${zonePrefix}/${zoneId.toLowerCase()}.txt`;
+  // Map zone to forecast file - Southeast zones use PAJK, others use PAFC
+  const southeastZones = ['PKZ011', 'PKZ012', 'PKZ013', 'PKZ126', 'PKZ127', 'PKZ128', 'PKZ129', 'PKZ130', 'PKZ131'];
+  const forecastFile = southeastZones.includes(zoneId.toUpperCase()) ? 'FZAK51.PAJK' : 'FZAK51.PAFC';
+
+  // Use NOAA grouped forecast file endpoint
+  const url = `https://www.ndbc.noaa.gov/data/Forecasts/${forecastFile}.html`;
   
   try {
-    console.log(`Fetching text forecast from: ${url}`);
+    console.log(`Fetching grouped forecast from: ${url}`);
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'BightWatch/1.0 (https://sage-syrniki-159054.netlify.app contact@oceanbight.com)'
@@ -71,17 +74,21 @@ async function fetchNOAAData(zoneId) {
     console.log(`Response status: ${response.status}`);
     
     if (response.ok) {
-      const text = await response.text();
-      console.log(`Got forecast text (${text.length} chars)`);
+      const html = await response.text();
+      console.log(`Got forecast HTML (${html.length} chars)`);
       
-      // Convert text forecast to JSON format
+      // Extract text content from HTML
+      const textMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+      const text = textMatch ? textMatch[1].trim() : html;
+      
+      // Convert to JSON format
       return {
         properties: {
           updated: new Date().toISOString(),
           periods: [{
             name: 'Marine Forecast',
-            detailedForecast: text.trim(),
-            shortForecast: 'Marine conditions for ' + zoneId.toUpperCase()
+            detailedForecast: text,
+            shortForecast: 'Marine conditions for region containing ' + zoneId.toUpperCase()
           }]
         }
       };
@@ -91,7 +98,7 @@ async function fetchNOAAData(zoneId) {
     }
   } catch (error) {
     console.error(`Failed to fetch from ${url}:`, error.message);
-    throw new Error('Unable to fetch forecast data from NOAA text API');
+    throw new Error('Unable to fetch forecast data from NOAA grouped forecast');
   }
 }
 

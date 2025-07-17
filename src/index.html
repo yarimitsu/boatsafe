@@ -45,18 +45,13 @@
                 <!-- Location Selector -->
                 <section class="widget-container">
                     <div id="location-selector" class="widget">
-                        <h2>Select Marine Zone</h2>
+                        <h2>Select Marine Region</h2>
                         <div class="location-content">
                             <div class="dropdown-container">
-                                <label for="zone-dropdown" class="dropdown-label">Choose a marine zone:</label>
-                                <select id="zone-dropdown" class="zone-dropdown">
-                                    <option value="">Select a zone...</option>
+                                <label for="region-dropdown" class="dropdown-label">Choose a marine region:</label>
+                                <select id="region-dropdown" class="region-dropdown">
+                                    <option value="">Select a region...</option>
                                 </select>
-                            </div>
-                            <div class="region-filters">
-                                <button class="region-filter active" data-region="all">All Zones</button>
-                                <button class="region-filter" data-region="Southeast Alaska">Southeast</button>
-                                <button class="region-filter" data-region="Southcentral Alaska">Southcentral</button>
                             </div>
                         </div>
                     </div>
@@ -67,7 +62,15 @@
                     <div id="forecast-summary" class="widget">
                         <h2>Marine Forecast</h2>
                         <div class="forecast-content">
-                            <div class="loading">Select a zone to view forecast</div>
+                            <div class="zone-selector">
+                                <label for="zone-dropdown" class="dropdown-label">Select specific zone:</label>
+                                <select id="zone-dropdown" class="zone-dropdown">
+                                    <option value="">Select a region first...</option>
+                                </select>
+                            </div>
+                            <div class="forecast-display">
+                                <div class="loading">Select a region to view forecast</div>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -5,7 +5,11 @@ class ForecastSummary {
     constructor() {
         this.container = document.getElementById('forecast-summary');
         this.content = this.container.querySelector('.forecast-content');
+        this.zoneDropdown = document.getElementById('zone-dropdown');
+        this.forecastDisplay = this.container.querySelector('.forecast-display');
         this.currentData = null;
+        this.currentRegion = null;
+        this.selectedZone = null;
         
         this.init();
     }
@@ -15,10 +19,67 @@ class ForecastSummary {
      */
     init() {
         this.showLoading();
+        this.setupEventListeners();
     }
 
     /**
-     * Update widget with forecast data
+     * Set up event listeners
+     */
+    setupEventListeners() {
+        if (this.zoneDropdown) {
+            this.zoneDropdown.addEventListener('change', (e) => {
+                const zoneId = e.target.value;
+                this.selectZone(zoneId);
+            });
+        }
+    }
+
+    /**
+     * Update widget with region and forecast data
+     * @param {Object} regionData - Region data with zones
+     * @param {Object} forecastData - Complete forecast data
+     */
+    updateRegion(regionData, forecastData) {
+        this.currentRegion = regionData;
+        this.currentData = forecastData;
+        this.populateZoneDropdown();
+        this.showLoading('Select a specific zone to view forecast');
+    }
+
+    /**
+     * Populate zone dropdown for current region
+     */
+    populateZoneDropdown() {
+        if (!this.zoneDropdown || !this.currentRegion) return;
+
+        // Clear existing options
+        this.zoneDropdown.innerHTML = '<option value="">Select a zone...</option>';
+
+        // Add zones for current region
+        Object.entries(this.currentRegion.zones).forEach(([zoneId, zoneName]) => {
+            const option = document.createElement('option');
+            option.value = zoneId;
+            option.textContent = `${zoneId} - ${zoneName}`;
+            this.zoneDropdown.appendChild(option);
+        });
+    }
+
+    /**
+     * Select and display specific zone forecast
+     * @param {string} zoneId - Zone ID to display
+     */
+    selectZone(zoneId) {
+        if (!zoneId || !this.currentData) {
+            this.showLoading('Select a zone to view forecast');
+            return;
+        }
+
+        this.selectedZone = zoneId;
+        this.renderZoneForecast(zoneId);
+    }
+
+    /**
+     * Update widget with forecast data (legacy method)
      * @param {Object} data - Parsed forecast data
      */
     update(data) {
@@ -172,10 +233,86 @@ class ForecastSummary {
     }
 
     /**
+     * Render forecast for specific zone
+     * @param {string} zoneId - Zone ID to render
+     */
+    renderZoneForecast(zoneId) {
+        if (!this.currentData || !this.currentData.properties || !this.currentData.properties.periods) {
+            this.showError('No forecast data available');
+            return;
+        }
+
+        const fullText = this.currentData.properties.periods[0].detailedForecast;
+        const zoneForecast = this.extractZoneForecast(fullText, zoneId);
+        
+        if (!zoneForecast) {
+            this.showError(`Forecast for ${zoneId} not found in current data`);
+            return;
+        }
+
+        const zoneName = this.currentRegion?.zones[zoneId] || zoneId;
+        
+        const html = `
+            <div class="forecast-header">
+                <div class="forecast-location">${zoneId} - ${zoneName}</div>
+                <div class="forecast-updated">Updated: ${this.formatDate(new Date(this.currentData.properties.updated))}</div>
+            </div>
+            <div class="zone-forecast">
+                <pre class="forecast-text">${zoneForecast}</pre>
+            </div>
+        `;
+
+        if (this.forecastDisplay) {
+            this.forecastDisplay.innerHTML = html;
+        } else {
+            this.content.innerHTML = html;
+        }
+    }
+
+    /**
+     * Extract forecast text for specific zone
+     * @param {string} fullText - Complete forecast text
+     * @param {string} zoneId - Zone ID to extract
+     * @returns {string|null} Zone-specific forecast text
+     */
+    extractZoneForecast(fullText, zoneId) {
+        const lines = fullText.split('\n');
+        let zoneStartIndex = -1;
+        let zoneEndIndex = -1;
+        
+        // Find the start of the zone section
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes(zoneId)) {
+                zoneStartIndex = i;
+                break;
+            }
+        }
+        
+        if (zoneStartIndex === -1) {
+            return null;
+        }
+        
+        // Find the end of the zone section (next PKZ or end of text)
+        for (let i = zoneStartIndex + 1; i < lines.length; i++) {
+            if (lines[i].match(/PKZ\d{3}/)) {
+                zoneEndIndex = i;
+                break;
+            }
+        }
+        
+        if (zoneEndIndex === -1) {
+            zoneEndIndex = lines.length;
+        }
+        
+        return lines.slice(zoneStartIndex, zoneEndIndex).join('\n').trim();
+    }
+
+    /**
      * Show loading state
      */
-    showLoading() {
-        this.content.innerHTML = '<div class="loading">Loading forecast...</div>';
+    showLoading(message = 'Loading forecast...') {
+        const content = this.forecastDisplay || this.content;
+        content.innerHTML = `<div class="loading">${message}</div>`;
     }
 
     /**

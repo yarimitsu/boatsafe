@@ -3,7 +3,7 @@
  */
 class BightWatchApp {
     constructor() {
-        this.currentZone = null;
+        this.currentRegion = null;
         this.zones = null;
         this.endpoints = null;
         this.widgets = {};
@@ -130,55 +130,51 @@ class BightWatchApp {
     }
 
     /**
-     * Zone selection handler
-     * @param {string} zoneId - Selected zone ID
+     * Region selection handler
+     * @param {string} regionId - Selected region ID
      */
-    onZoneSelected(zoneId) {
-        console.log(`Zone selected: ${zoneId}, current zone: ${this.currentZone}`);
-        if (zoneId === this.currentZone) {
-            console.log('Same zone selected, skipping reload');
+    onZoneSelected(regionId) {
+        console.log(`Region selected: ${regionId}, current region: ${this.currentRegion}`);
+        if (regionId === this.currentRegion) {
+            console.log('Same region selected, skipping reload');
             return;
         }
         
-        this.currentZone = zoneId;
-        console.log(`Loading new zone: ${zoneId}`);
+        this.currentRegion = regionId;
+        console.log(`Loading new region: ${regionId}`);
         
         // Save preference
         try {
-            localStorage.setItem('bightwatch_selected_zone', zoneId);
+            localStorage.setItem('bightwatch_selected_region', regionId);
         } catch (error) {
-            console.warn('Failed to save zone preference:', error);
+            console.warn('Failed to save region preference:', error);
         }
         
-        // Clear cache for this zone to ensure fresh data
-        const cacheKey = window.BightWatch.http.getCacheKey(`${window.location.origin}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`);
-        window.BightWatch.cache.remove(cacheKey);
-        
-        // Load forecast data
-        this.loadForecastData(zoneId);
+        // Load forecast data for region
+        this.loadRegionForecastData(regionId);
     }
 
     /**
-     * Load forecast data for selected zone
-     * @param {string} zoneId - Zone ID
+     * Load forecast data for selected region
+     * @param {string} regionId - Region ID
      */
-    async loadForecastData(zoneId) {
-        if (!zoneId || !this.zones[zoneId]) {
-            console.error('Invalid zone ID:', zoneId);
+    async loadRegionForecastData(regionId) {
+        if (!regionId || !this.zones.regions[regionId]) {
+            console.error('Invalid region ID:', regionId);
             return;
         }
 
-        const zone = this.zones[zoneId];
-        this.showStatus(`Loading forecast for ${zone.name}...`, 'loading');
+        const region = this.zones.regions[regionId];
+        this.showStatus(`Loading forecast for ${region.name}...`, 'loading');
 
         try {
-            // Load marine forecast first
-            const forecast = await this.loadCoastalForecast(zoneId, zone);
-            this.widgets.forecastSummary.update(forecast);
+            // Load marine forecast for the region
+            const forecast = await this.loadRegionForecast(regionId, region);
+            this.widgets.forecastSummary.updateRegion(region, forecast);
 
             // Load other data with explicit error handling
             const promises = [
-                this.loadDiscussion(zone.office).catch(err => {
+                this.loadDiscussion(region.office).catch(err => {
                     console.warn('Discussion loading failed:', err);
                     return { error: 'Discussion not available', type: 'discussion' };
                 }),
@@ -186,11 +182,11 @@ class BightWatchApp {
                     console.warn('Alerts loading failed:', err);
                     return { features: [], error: 'Alerts not available', type: 'alerts' };
                 }),
-                this.loadTides(zoneId).catch(err => {
+                this.loadTides(regionId).catch(err => {
                     console.warn('Tides loading failed:', err);
                     return { error: 'Tide data not available', type: 'tides' };
                 }),
-                this.loadObservations(zoneId).catch(err => {
+                this.loadObservations(regionId).catch(err => {
                     console.warn('Observations loading failed:', err);
                     return { error: 'Observation data not available', type: 'observations' };
                 })
@@ -244,7 +240,7 @@ class BightWatchApp {
                 }
             });
 
-            this.showStatus(`Loaded forecast for ${zone.name}`, 'success');
+            this.showStatus(`Loaded forecast for ${region.name}`, 'success');
             
         } catch (error) {
             console.error('Failed to load forecast data:', error);
@@ -253,33 +249,26 @@ class BightWatchApp {
     }
 
     /**
-     * Load coastal waters forecast
-     * @param {string} zoneId - Zone ID
-     * @param {Object} zone - Zone data
+     * Load region forecast
+     * @param {string} regionId - Region ID
+     * @param {Object} region - Region data
      * @returns {Promise} Parsed forecast data
      */
-    async loadCoastalForecast(zoneId, zone) {
+    async loadRegionForecast(regionId, region) {
         // Use current Netlify deployment proxy to get marine forecast data
         const currentHost = window.location.origin;
-        const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
+        // Use any zone from the region since they all map to the same forecast file
+        const firstZone = Object.keys(region.zones)[0];
+        const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${firstZone.toUpperCase()}`;
         
         try {
-            console.log(`Fetching forecast for zone ${zoneId} via proxy:`, proxyUrl);
+            console.log(`Fetching forecast for region ${regionId} via proxy:`, proxyUrl);
             const data = await window.BightWatch.http.get(proxyUrl, { cacheTTL: 5, skipCache: true });
-            console.log(`Proxy request succeeded for ${zoneId}:`, data);
+            console.log(`Proxy request succeeded for ${regionId}:`, data);
             
-            // If we got forecast data, parse it
+            // Return the complete forecast data for zone parsing
             if (data.properties && data.properties.periods) {
-                const rawText = data.properties.periods[0].detailedForecast;
-                const parsedPeriods = this.parseNOAATextForecast(rawText);
-                
-                const forecast = {
-                    zoneName: zone.name,
-                    issued: new Date(data.properties.updated),
-                    periods: parsedPeriods
-                };
-                
-                return forecast;
+                return data;
             } else {
                 throw new Error('No forecast data in proxy response');
             }
