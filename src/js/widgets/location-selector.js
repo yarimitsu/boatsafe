@@ -42,20 +42,36 @@ class LocationSelector {
      * Populate dropdown with regions
      */
     populateRegionDropdown() {
-        if (!this.regionDropdown || !this.zones.regions) return;
+        console.log('LocationSelector.populateRegionDropdown called');
+        console.log('this.regionDropdown:', this.regionDropdown);
+        console.log('this.zones:', this.zones);
+        
+        if (!this.regionDropdown) {
+            console.error('Region dropdown element not found');
+            return;
+        }
+        
+        if (!this.zones || !this.zones.regions) {
+            console.error('No zones.regions data available:', this.zones);
+            return;
+        }
 
         const regions = Object.entries(this.zones.regions);
+        console.log('Regions to populate:', regions);
         
         // Clear existing options (except the first placeholder)
         this.regionDropdown.innerHTML = '<option value="">Select a region...</option>';
         
         // Add regions to dropdown
         regions.forEach(([id, region]) => {
+            console.log(`Adding region: ${id} - ${region.name}`);
             const option = document.createElement('option');
             option.value = id;
             option.textContent = region.name;
             this.regionDropdown.appendChild(option);
         });
+        
+        console.log('Region dropdown populated with', regions.length, 'regions');
     }
 
     /**
