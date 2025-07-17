@@ -87,4 +87,7 @@ fs.copyFileSync(path.join(srcDir, 'data/tide-stations.json'), path.join(dataDir,
 // Copy logo image
 fs.copyFileSync(path.join(srcDir, 'oceanbightlogo.png'), path.join(buildDir, 'oceanbightlogo.png'));
 
+// Copy manifest.json
+fs.copyFileSync(path.join(srcDir, 'manifest.json'), path.join(buildDir, 'manifest.json'));
+
 console.log('Build process started...');
