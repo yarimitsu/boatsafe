@@ -134,9 +134,14 @@ class BightWatchApp {
      * @param {string} zoneId - Selected zone ID
      */
     onZoneSelected(zoneId) {
-        if (zoneId === this.currentZone) return;
+        console.log(`Zone selected: ${zoneId}, current zone: ${this.currentZone}`);
+        if (zoneId === this.currentZone) {
+            console.log('Same zone selected, skipping reload');
+            return;
+        }
         
         this.currentZone = zoneId;
+        console.log(`Loading new zone: ${zoneId}`);
         
         // Save preference
         try {
@@ -144,6 +149,10 @@ class BightWatchApp {
         } catch (error) {
             console.warn('Failed to save zone preference:', error);
         }
+        
+        // Clear cache for this zone to ensure fresh data
+        const cacheKey = window.BightWatch.http.getCacheKey(`${window.location.origin}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`);
+        window.BightWatch.cache.remove(cacheKey);
         
         // Load forecast data
         this.loadForecastData(zoneId);
@@ -234,9 +243,9 @@ class BightWatchApp {
         const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
         
         try {
-            console.log(`Fetching forecast via proxy:`, proxyUrl);
-            const data = await window.BightWatch.http.get(proxyUrl, { cacheTTL: 30 });
-            console.log(`Proxy request succeeded:`, data);
+            console.log(`Fetching forecast for zone ${zoneId} via proxy:`, proxyUrl);
+            const data = await window.BightWatch.http.get(proxyUrl, { cacheTTL: 5, skipCache: true });
+            console.log(`Proxy request succeeded for ${zoneId}:`, data);
             
             // If we got forecast data, parse it
             if (data.properties && data.properties.periods) {
