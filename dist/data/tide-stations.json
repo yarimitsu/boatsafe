@@ -1,0 +1,68 @@
+{
+  "9452400": {
+    "name": "Juneau, AK",
+    "region": "Southeast Alaska",
+    "lat": 58.2988,
+    "lon": -134.4197
+  },
+  "9452634": {
+    "name": "Skagway, AK",
+    "region": "Southeast Alaska", 
+    "lat": 59.4500,
+    "lon": -135.3167
+  },
+  "9451600": {
+    "name": "Ketchikan, AK",
+    "region": "Southeast Alaska",
+    "lat": 55.3317,
+    "lon": -131.6256
+  },
+  "9451054": {
+    "name": "Sitka, AK",
+    "region": "Southeast Alaska",
+    "lat": 57.0517,
+    "lon": -135.3417
+  },
+  "9455920": {
+    "name": "Anchorage, AK",
+    "region": "Southcentral Alaska",
+    "lat": 61.2378,
+    "lon": -149.8908
+  },
+  "9455500": {
+    "name": "Seward, AK",
+    "region": "Southcentral Alaska",
+    "lat": 60.1200,
+    "lon": -149.4267
+  },
+  "9455760": {
+    "name": "Nikiski, AK",
+    "region": "Southcentral Alaska",
+    "lat": 60.6833,
+    "lon": -151.3983
+  },
+  "9454050": {
+    "name": "Valdez, AK",
+    "region": "Southcentral Alaska",
+    "lat": 61.1267,
+    "lon": -146.3617
+  },
+  "9454240": {
+    "name": "Cordova, AK",
+    "region": "Southcentral Alaska",
+    "lat": 60.5583,
+    "lon": -145.7550
+  },
+  "9453220": {
+    "name": "Kodiak Island, AK",
+    "region": "Southcentral Alaska",
+    "lat": 57.7300,
+    "lon": -152.5117
+  },
+  "9459450": {
+    "name": "Homer, AK",
+    "region": "Southcentral Alaska",
+    "lat": 59.6433,
+    "lon": -151.4183
+  }
+}
