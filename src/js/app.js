@@ -176,23 +176,23 @@ class BightWatchApp {
             const forecast = await this.loadCoastalForecast(zoneId, zone);
             this.widgets.forecastSummary.update(forecast);
 
-            // Load other data with graceful fallbacks
+            // Load other data with explicit error handling
             const promises = [
                 this.loadDiscussion(zone.office).catch(err => {
                     console.warn('Discussion loading failed:', err);
-                    return null;
+                    return { error: 'Discussion not available', type: 'discussion' };
                 }),
                 this.loadAlerts().catch(err => {
                     console.warn('Alerts loading failed:', err);
-                    return { features: [] };
+                    return { features: [], error: 'Alerts not available', type: 'alerts' };
                 }),
                 this.loadTides(zoneId).catch(err => {
                     console.warn('Tides loading failed:', err);
-                    return null;
+                    return { error: 'Tide data not available', type: 'tides' };
                 }),
                 this.loadObservations(zoneId).catch(err => {
                     console.warn('Observations loading failed:', err);
-                    return null;
+                    return { error: 'Observation data not available', type: 'observations' };
                 })
             ];
 
@@ -203,7 +203,7 @@ class BightWatchApp {
                 const widgetNames = ['Discussion', 'Alerts', 'Tides', 'Observations'];
                 console.log(`Widget ${index} (${widgetNames[index]}): status=${result.status}, value=`, result.value);
                 
-                if (result.status === 'fulfilled' && result.value) {
+                if (result.status === 'fulfilled' && result.value && !result.value.error) {
                     switch (index) {
                         case 0: // Discussion
                             this.widgets.discussion.update(result.value);
@@ -223,19 +223,21 @@ class BightWatchApp {
                             break;
                     }
                 } else {
-                    console.warn(`Failed to load data for widget ${index} (${widgetNames[index]}):`, result.reason || 'undefined result');
-                    // Show placeholder message instead of error
+                    const errorMsg = result.value?.error || result.reason || 'Data not available';
+                    console.warn(`Failed to load data for widget ${index} (${widgetNames[index]}):`, errorMsg);
+                    
+                    // Show appropriate fallback for each widget
                     switch (index) {
-                        case 0:
+                        case 0: // Discussion
                             this.widgets.discussion.showError('Discussion not available - using cached forecast data');
                             break;
-                        case 1:
+                        case 1: // Alerts
                             this.widgets.alerts.showNoAlerts();
                             break;
-                        case 2:
+                        case 2: // Tides
                             this.widgets.tides.showDefault();
                             break;
-                        case 3:
+                        case 3: // Observations
                             this.widgets.observations.showError('Observation data not available - check individual buoy websites');
                             break;
                     }
