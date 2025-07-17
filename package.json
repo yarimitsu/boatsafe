@@ -1,7 +1,7 @@
 {
   "name": "boat-safe",
   "version": "1.0.0",
-  "description": "A Marine Forecast App for Alaska Waters"
+  "description": "A Marine Forecast App for Alaska Waters",
   "main": "src/js/app.js",
   "scripts": {
     "start": "cd src && live-server --host=0.0.0.0 --port=3000 --entry-file=index.html",

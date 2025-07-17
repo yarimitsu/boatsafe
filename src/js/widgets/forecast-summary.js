@@ -161,7 +161,12 @@ class ForecastSummary {
             // Fetch forecast data for this specific zone
             const currentHost = window.location.origin;
             const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
+            
+            console.log(`Fetching forecast for ${zoneId} from:`, proxyUrl);
+            
             const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
+            
+            console.log('Received data:', data);
             
             if (data.properties && data.properties.periods) {
                 this.currentData = data;
@@ -174,11 +179,12 @@ class ForecastSummary {
                     console.warn('Failed to save zone preference:', error);
                 }
             } else {
-                throw new Error('No forecast data received');
+                throw new Error('No forecast data received - invalid response structure');
             }
         } catch (error) {
             console.error('Failed to load zone forecast:', error);
-            this.showError(`Failed to load forecast for ${zoneId}`);
+            console.error('Error details:', error.message);
+            this.showError(`Failed to load forecast for ${zoneId}: ${error.message}`);
         }
     }
 
