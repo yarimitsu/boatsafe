@@ -178,33 +178,52 @@ class BightWatchApp {
 
             // Load other data with graceful fallbacks
             const promises = [
-                this.loadDiscussion(zone.office).catch(() => null),
-                this.loadAlerts().catch(() => ({ features: [] })),
-                this.loadTides(zoneId).catch(() => null),
-                this.loadObservations(zoneId).catch(() => null)
+                this.loadDiscussion(zone.office).catch(err => {
+                    console.warn('Discussion loading failed:', err);
+                    return null;
+                }),
+                this.loadAlerts().catch(err => {
+                    console.warn('Alerts loading failed:', err);
+                    return { features: [] };
+                }),
+                this.loadTides(zoneId).catch(err => {
+                    console.warn('Tides loading failed:', err);
+                    return null;
+                }),
+                this.loadObservations(zoneId).catch(err => {
+                    console.warn('Observations loading failed:', err);
+                    return null;
+                })
             ];
 
             const results = await Promise.allSettled(promises);
 
             // Update widgets with results
             results.forEach((result, index) => {
+                const widgetNames = ['Discussion', 'Alerts', 'Tides', 'Observations'];
+                console.log(`Widget ${index} (${widgetNames[index]}): status=${result.status}, value=`, result.value);
+                
                 if (result.status === 'fulfilled' && result.value) {
                     switch (index) {
                         case 0: // Discussion
                             this.widgets.discussion.update(result.value);
+                            console.log('Updated discussion widget');
                             break;
                         case 1: // Alerts
                             this.widgets.alerts.update(result.value);
+                            console.log('Updated alerts widget');
                             break;
                         case 2: // Tides
                             this.widgets.tides.update(result.value);
+                            console.log('Updated tides widget');
                             break;
                         case 3: // Observations
                             this.widgets.observations.update(result.value);
+                            console.log('Updated observations widget');
                             break;
                     }
                 } else {
-                    console.warn(`Failed to load data for widget ${index}:`, result.reason);
+                    console.warn(`Failed to load data for widget ${index} (${widgetNames[index]}):`, result.reason || 'undefined result');
                     // Show placeholder message instead of error
                     switch (index) {
                         case 0:
