@@ -42,10 +42,15 @@ class ForecastSummary {
             return;
         }
 
+        // Get station name and issue time from first period
+        const firstPeriod = periods[0];
+        const stationName = firstPeriod.stationName || zoneName;
+        const issueTime = firstPeriod.issueTime || this.formatDate(issued);
+
         const html = `
             <div class="forecast-header">
-                <div class="forecast-location">${zoneName || 'Unknown Zone'}</div>
-                <div class="forecast-updated">Updated: ${this.formatDate(issued)}</div>
+                <div class="forecast-location">${stationName}</div>
+                <div class="forecast-updated">${issueTime}</div>
             </div>
             <div class="forecast-periods">
                 ${periods.map(period => this.renderPeriod(period)).join('')}
@@ -61,20 +66,12 @@ class ForecastSummary {
      * @returns {string} HTML string
      */
     renderPeriod(period) {
-        const { name, wind, waves, weather, summary } = period;
+        const { name, text } = period;
         
         return `
             <div class="forecast-period">
-                <div class="period-header">
-                    <div class="period-name">${name}</div>
-                    <div class="period-time">${this.getPeriodTime(name)}</div>
-                </div>
-                
-                ${wind ? this.renderWind(wind) : ''}
-                ${waves ? this.renderWaves(waves) : ''}
-                ${weather ? this.renderWeather(weather) : ''}
-                
-                <div class="weather-summary">${summary}</div>
+                <div class="period-name">${name}</div>
+                <div class="period-text">${text}</div>
             </div>
         `;
     }

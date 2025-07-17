@@ -240,17 +240,13 @@ class BightWatchApp {
             
             // If we got forecast data, parse it
             if (data.properties && data.properties.periods) {
+                const rawText = data.properties.periods[0].detailedForecast;
+                const parsedPeriods = this.parseNOAATextForecast(rawText);
+                
                 const forecast = {
                     zoneName: zone.name,
                     issued: new Date(data.properties.updated),
-                    periods: data.properties.periods.map(period => ({
-                        name: period.name,
-                        text: period.detailedForecast,
-                        wind: this.parseNWSWind(period.detailedForecast),
-                        waves: this.parseNWSWaves(period.detailedForecast),
-                        weather: this.parseNWSWeather(period.detailedForecast),
-                        summary: period.shortForecast
-                    }))
+                    periods: parsedPeriods
                 };
                 
                 return forecast;
@@ -262,6 +258,64 @@ class BightWatchApp {
             console.error('Proxy request failed:', error);
             throw new Error('Marine forecast data not available via proxy');
         }
+    }
+
+    /**
+     * Parse NOAA text forecast into individual periods
+     * @param {string} rawText - Raw NOAA text forecast
+     * @returns {Array} Parsed forecast periods
+     */
+    parseNOAATextForecast(rawText) {
+        const lines = rawText.split('\n');
+        const periods = [];
+        let currentPeriod = null;
+        let stationName = '';
+        let issueTime = '';
+        
+        // Extract station name and issue time
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // Look for the station/zone name (usually after PKZ###-)
+            if (line.includes('PKZ') && line.includes('-')) {
+                const nextLine = lines[i + 1]?.trim();
+                if (nextLine && !nextLine.includes('PM') && !nextLine.includes('AM')) {
+                    stationName = nextLine;
+                }
+            }
+            
+            // Look for issue time
+            if (line.includes('PM AKDT') || line.includes('AM AKDT')) {
+                issueTime = line;
+            }
+            
+            // Look for forecast periods (start with .)
+            if (line.startsWith('.') && line.includes('...')) {
+                // Save previous period
+                if (currentPeriod) {
+                    periods.push(currentPeriod);
+                }
+                
+                // Start new period
+                const periodName = line.replace(/^\./, '').replace(/\.\.\.$/, '').trim();
+                currentPeriod = {
+                    name: periodName,
+                    text: '',
+                    stationName,
+                    issueTime
+                };
+            } else if (currentPeriod && line && !line.includes('$$') && !line.includes('Expires:')) {
+                // Add to current period text
+                currentPeriod.text += (currentPeriod.text ? ' ' : '') + line;
+            }
+        }
+        
+        // Add the last period
+        if (currentPeriod) {
+            periods.push(currentPeriod);
+        }
+        
+        return periods;
     }
 
     /**

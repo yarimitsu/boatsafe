@@ -96,16 +96,17 @@
 .forecast-location {
     font-weight: 600;
     color: var(--text-primary);
+    font-size: var(--font-size-lg);
 }
 
 .forecast-updated {
     font-size: var(--font-size-sm);
-    color: var(--gray-500);
+    color: var(--text-secondary);
 }
 
 .forecast-periods {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: var(--spacing-4);
 }
 
@@ -127,11 +128,20 @@
 .period-name {
     font-weight: 600;
     color: var(--text-primary);
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-2);
+    text-transform: uppercase;
+}
+
+.period-text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: var(--font-size-base);
 }
 
 .period-time {
     font-size: var(--font-size-sm);
-    color: var(--gray-500);
+    color: var(--text-secondary);
 }
 
 .wind-info {
