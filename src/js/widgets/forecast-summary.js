@@ -5,11 +5,13 @@ class ForecastSummary {
     constructor() {
         this.container = document.getElementById('forecast-summary');
         this.content = this.container.querySelector('.forecast-content');
+        this.regionDropdown = document.getElementById('region-dropdown');
         this.zoneDropdown = document.getElementById('zone-dropdown');
         this.forecastDisplay = this.container.querySelector('.forecast-display');
         this.currentData = null;
         this.currentRegion = null;
         this.selectedZone = null;
+        this.zones = null;
         
         this.init();
     }
@@ -20,12 +22,90 @@ class ForecastSummary {
     init() {
         this.showLoading();
         this.setupEventListeners();
+        this.loadZones();
+    }
+
+    /**
+     * Load zones data and populate region dropdown
+     */
+    async loadZones() {
+        try {
+            const response = await window.BoatSafe.http.get('./data/zones.json', { cacheTTL: 1440 });
+            this.zones = typeof response === 'string' ? JSON.parse(response) : response;
+            this.populateRegionDropdown();
+        } catch (error) {
+            console.error('Failed to load zones:', error);
+        }
+    }
+
+    /**
+     * Populate region dropdown
+     */
+    populateRegionDropdown() {
+        if (!this.regionDropdown || !this.zones?.regions) return;
+
+        this.regionDropdown.innerHTML = '<option value="">Select a region...</option>';
+        
+        Object.entries(this.zones.regions).forEach(([id, region]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = region.name;
+            this.regionDropdown.appendChild(option);
+        });
+        
+        // Restore saved region if available
+        try {
+            const savedRegion = localStorage.getItem('boatsafe_selected_region');
+            if (savedRegion && this.zones.regions[savedRegion]) {
+                this.regionDropdown.value = savedRegion;
+                this.selectRegion(savedRegion);
+                
+                // Also restore saved zone if available
+                setTimeout(() => {
+                    const savedZone = localStorage.getItem('boatsafe_selected_zone');
+                    if (savedZone && this.currentRegion?.zones[savedZone]) {
+                        this.zoneDropdown.value = savedZone;
+                        this.selectZone(savedZone);
+                    }
+                }, 100);
+            }
+        } catch (error) {
+            console.warn('Failed to restore preferences:', error);
+        }
+    }
+
+    /**
+     * Select a region and populate zone dropdown
+     * @param {string} regionId - Region ID
+     */
+    selectRegion(regionId) {
+        if (!regionId || !this.zones?.regions[regionId]) {
+            this.zoneDropdown.innerHTML = '<option value="">Select a region first...</option>';
+            return;
+        }
+
+        this.currentRegion = this.zones.regions[regionId];
+        this.populateZoneDropdown();
+        
+        // Save region preference
+        try {
+            localStorage.setItem('boatsafe_selected_region', regionId);
+        } catch (error) {
+            console.warn('Failed to save region preference:', error);
+        }
     }
 
     /**
      * Set up event listeners
      */
     setupEventListeners() {
+        if (this.regionDropdown) {
+            this.regionDropdown.addEventListener('change', (e) => {
+                const regionId = e.target.value;
+                this.selectRegion(regionId);
+            });
+        }
+        
         if (this.zoneDropdown) {
             this.zoneDropdown.addEventListener('change', (e) => {
                 const zoneId = e.target.value;
@@ -68,14 +148,38 @@ class ForecastSummary {
      * Select and display specific zone forecast
      * @param {string} zoneId - Zone ID to display
      */
-    selectZone(zoneId) {
-        if (!zoneId || !this.currentData) {
+    async selectZone(zoneId) {
+        if (!zoneId || !this.currentRegion) {
             this.showLoading('Select a zone to view forecast');
             return;
         }
 
         this.selectedZone = zoneId;
-        this.renderZoneForecast(zoneId);
+        this.showLoading(`Loading forecast for ${zoneId}...`);
+        
+        try {
+            // Fetch forecast data for this specific zone
+            const currentHost = window.location.origin;
+            const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
+            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
+            
+            if (data.properties && data.properties.periods) {
+                this.currentData = data;
+                this.renderZoneForecast(zoneId);
+                
+                // Save zone preference
+                try {
+                    localStorage.setItem('boatsafe_selected_zone', zoneId);
+                } catch (error) {
+                    console.warn('Failed to save zone preference:', error);
+                }
+            } else {
+                throw new Error('No forecast data received');
+            }
+        } catch (error) {
+            console.error('Failed to load zone forecast:', error);
+            this.showError(`Failed to load forecast for ${zoneId}`);
+        }
     }
 
     /**
@@ -113,7 +217,7 @@ class ForecastSummary {
                 <div class="forecast-location">${stationName}</div>
                 <div class="forecast-updated">${issueTime}</div>
                 <div class="forecast-link">
-                    <a href="https://www.ndbc.noaa.gov/data/Forecasts/FZAK51.PAJK.html" target="_blank" rel="noopener">
+                    <a href="https://www.weather.gov/marine/forecast#akcwf" target="_blank" rel="noopener">
                         View All Alaska Marine Forecasts →
                     </a>
                 </div>
@@ -233,7 +337,7 @@ class ForecastSummary {
     }
 
     /**
-     * Render forecast for specific zone
+     * Render forecast for specific zone (optimized for low bandwidth)
      * @param {string} zoneId - Zone ID to render
      */
     renderZoneForecast(zoneId) {
@@ -252,10 +356,11 @@ class ForecastSummary {
 
         const zoneName = this.currentRegion?.zones[zoneId] || zoneId;
         
+        // Streamlined for low bandwidth - minimal HTML
         const html = `
             <div class="forecast-header">
-                <div class="forecast-location">${zoneId} - ${zoneName}</div>
-                <div class="forecast-updated">Updated: ${this.formatDate(new Date(this.currentData.properties.updated))}</div>
+                <strong>${zoneId} - ${zoneName}</strong>
+                <small>Updated: ${this.formatDate(new Date(this.currentData.properties.updated))}</small>
             </div>
             <div class="zone-forecast">
                 <pre class="forecast-text">${zoneForecast}</pre>

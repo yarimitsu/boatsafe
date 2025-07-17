@@ -4,7 +4,7 @@
 class Cache {
     constructor() {
         this.storage = window.localStorage;
-        this.prefix = 'bightwatch_';
+        this.prefix = 'boatsafe_';
     }
 
     /**
@@ -144,10 +144,10 @@ class Cache {
 }
 
 // Global cache instance
-window.BightWatch = window.BightWatch || {};
-window.BightWatch.cache = new Cache();
+window.BoatSafe = window.BoatSafe || {};
+window.BoatSafe.cache = new Cache();
 
 // Clean up expired items on page load
 window.addEventListener('load', () => {
-    window.BightWatch.cache.cleanup();
+    window.BoatSafe.cache.cleanup();
 });

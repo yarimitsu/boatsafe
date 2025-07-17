@@ -1,7 +1,7 @@
 /**
- * Bight Watch - Main Application
+ * Boat Safe - Main Application
  */
-class BightWatchApp {
+class BoatSafeApp {
     constructor() {
         this.currentRegion = null;
         this.zones = null;
@@ -19,7 +19,7 @@ class BightWatchApp {
      */
     async init() {
         try {
-            this.showStatus('Initializing Bight Watch...', 'loading');
+            this.showStatus('Initializing Boat Safe...', 'loading');
             
             // Load configuration data
             await this.loadConfig();
@@ -49,8 +49,8 @@ class BightWatchApp {
     async loadConfig() {
         try {
             const [zonesResponse, endpointsResponse] = await Promise.all([
-                window.BightWatch.http.get('./data/zones.json', { cacheTTL: 1440 }), // 24 hours
-                window.BightWatch.http.get('./data/endpoints.json', { cacheTTL: 1440 })
+                window.BoatSafe.http.get('./data/zones.json', { cacheTTL: 1440 }), // 24 hours
+                window.BoatSafe.http.get('./data/endpoints.json', { cacheTTL: 1440 })
             ]);
 
             this.zones = typeof zonesResponse === 'string' ? JSON.parse(zonesResponse) : zonesResponse;
@@ -71,7 +71,6 @@ class BightWatchApp {
         
         // Initialize widgets
         this.widgets = {
-            locationSelector: new LocationSelector(this.zones, this.onZoneSelected.bind(this)),
             forecastSummary: new ForecastSummary(),
             discussion: new Discussion(),
             alerts: new Alerts(),
@@ -87,11 +86,10 @@ class BightWatchApp {
      */
     loadPreferences() {
         try {
-            const savedRegion = localStorage.getItem('bightwatch_selected_region');
+            const savedRegion = localStorage.getItem('boatsafe_selected_region');
             if (savedRegion && this.zones.regions && this.zones.regions[savedRegion]) {
                 this.currentRegion = savedRegion;
-                this.widgets.locationSelector.setSelected(savedRegion);
-                this.loadRegionForecastData(savedRegion);
+                // Widget will handle its own initialization
             }
         } catch (error) {
             console.warn('Failed to load preferences:', error);
@@ -145,7 +143,7 @@ class BightWatchApp {
         
         // Save preference
         try {
-            localStorage.setItem('bightwatch_selected_region', regionId);
+            localStorage.setItem('boatsafe_selected_region', regionId);
         } catch (error) {
             console.warn('Failed to save region preference:', error);
         }
@@ -168,8 +166,9 @@ class BightWatchApp {
         this.showStatus(`Loading forecast for ${region.name}...`, 'loading');
 
         try {
-            // Load marine forecast for the region
-            const forecast = await this.loadRegionForecast(regionId, region);
+            // Load marine forecast for the region (using first zone to get the forecast file)
+            const firstZone = Object.keys(region.zones)[0];
+            const forecast = await this.loadRegionForecast(regionId, region, firstZone);
             this.widgets.forecastSummary.updateRegion(region, forecast);
 
             // Load other data with explicit error handling
@@ -252,18 +251,17 @@ class BightWatchApp {
      * Load region forecast
      * @param {string} regionId - Region ID
      * @param {Object} region - Region data
+     * @param {string} zoneId - Zone ID to fetch forecast for
      * @returns {Promise} Parsed forecast data
      */
-    async loadRegionForecast(regionId, region) {
+    async loadRegionForecast(regionId, region, zoneId) {
         // Use current Netlify deployment proxy to get marine forecast data
         const currentHost = window.location.origin;
-        // Use any zone from the region since they all map to the same forecast file
-        const firstZone = Object.keys(region.zones)[0];
-        const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${firstZone.toUpperCase()}`;
+        const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
         
         try {
             console.log(`Fetching forecast for region ${regionId} via proxy:`, proxyUrl);
-            const data = await window.BightWatch.http.get(proxyUrl, { cacheTTL: 5, skipCache: true });
+            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
             console.log(`Proxy request succeeded for ${regionId}:`, data);
             
             // Return the complete forecast data for zone parsing
@@ -450,7 +448,7 @@ class BightWatchApp {
         const url = endpoint.baseUrl + endpoint.format.replace('{office}', office.toUpperCase());
 
         try {
-            const data = await window.BightWatch.http.get(url, { cacheTTL: 180 });
+            const data = await window.BoatSafe.http.get(url, { cacheTTL: 180 });
             
             // Get the most recent discussion
             const latestProduct = data.features && data.features.length > 0 ? data.features[0] : null;
@@ -479,7 +477,7 @@ class BightWatchApp {
         const url = endpoint.baseUrl + endpoint.format;
 
         try {
-            const data = await window.BightWatch.http.get(url, { cacheTTL: 10 });
+            const data = await window.BoatSafe.http.get(url, { cacheTTL: 10 });
             return data;
         } catch (error) {
             console.error('Failed to load alerts:', error);
@@ -506,7 +504,7 @@ class BightWatchApp {
             .replace(/{station}/g, station);
 
         try {
-            const data = await window.BightWatch.http.get(url, { cacheTTL: 1440 });
+            const data = await window.BoatSafe.http.get(url, { cacheTTL: 1440 });
             return data;
         } catch (error) {
             console.error('Failed to load tides:', error);
@@ -529,7 +527,7 @@ class BightWatchApp {
         const endpoint = this.endpoints.buoy;
         const promises = stations.map(station => {
             const url = endpoint.baseUrl + endpoint.format.replace('{station}', station);
-            return window.BightWatch.http.get(url, { cacheTTL: 10 });
+            return window.BoatSafe.http.get(url, { cacheTTL: 10 });
         });
 
         try {
@@ -663,7 +661,7 @@ class BightWatchApp {
         return {
             currentRegion: this.currentRegion,
             totalRegions: Object.keys(this.zones?.regions || {}).length,
-            cache: window.BightWatch.cache.getStats(),
+            cache: window.BoatSafe.cache.getStats(),
             lastUpdate: new Date().toISOString()
         };
     }
@@ -671,19 +669,19 @@ class BightWatchApp {
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.BightWatch = window.BightWatch || {};
-    window.BightWatch.app = new BightWatchApp();
+    window.BoatSafe = window.BoatSafe || {};
+    window.BoatSafe.app = new BoatSafeApp();
 });
 
 // Handle unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
-    if (window.BightWatch && window.BightWatch.app) {
-        window.BightWatch.app.showStatus('An error occurred', 'error');
+    if (window.BoatSafe && window.BoatSafe.app) {
+        window.BoatSafe.app.showStatus('An error occurred', 'error');
     }
 });
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = BightWatchApp;
+    module.exports = BoatSafeApp;
 }

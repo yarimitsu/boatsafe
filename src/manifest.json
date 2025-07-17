@@ -1,7 +1,7 @@
 {
-  "name": "BightWatch",
-  "short_name": "BightWatch",
-  "description": "Marine weather monitoring for Alaska's coastal waters",
+  "name": "Boat Safe",
+  "short_name": "Boat Safe",
+  "description": "Marine weather monitoring for Alaska's coastal waters"
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",

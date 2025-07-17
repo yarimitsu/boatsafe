@@ -1,4 +1,4 @@
-# Bight Watch
+# Boat Safe
 **A Marine Forecast App for Alaska Waters**
 
 
@@ -11,6 +11,8 @@
 - **Privacy-First**: No tracking, no data collection, no external dependencies
 - **Mobile-Optimized**: Responsive design for phones and tablets
 - **Offline Capable**: Cached forecasts work without internet
+- **Progressive Web App**: Installable on mobile devices with offline capabilities
+- **Netlify Edge Functions**: Secure proxy for NOAA data with rate limiting
 
 ## Architecture
 
@@ -41,8 +43,8 @@
 
 ### Installation
 ```bash
-git clone https://github.com/yourusername/bight-watch.git
-cd bight-watch
+git clone https://github.com/yarimitsu/boatsafe.git
+cd boatsafe
 npm install
 ```
 
@@ -58,32 +60,51 @@ npm run build
 # Generates optimized static files in ./dist
 ```
 
-### Deploy to GitHub Pages
-```bash
-npm run deploy
-# Builds and pushes to gh-pages branch
-```
+### Deploy to Netlify
+The app is automatically deployed to Netlify when changes are pushed to the main branch.
+Live deployment: https://boatsafe.oceanbight.com
+
+### Custom Domain Setup
+To use a custom domain with Netlify:
+1. Go to your Netlify dashboard
+2. Navigate to Site Settings → Domain Management
+3. Add your custom domain (e.g., bightwatch.com)
+4. Configure DNS settings as provided by Netlify
+5. SSL certificates are automatically provisioned
 
 ## Project Structure
 
 ```
-bight-watch/
+boatsafe/
 ├── src/
 │   ├── js/
 │   │   ├── app.js              # Main application logic
 │   │   ├── forecast-parser.js  # NOAA data parsing
 │   │   ├── widgets/           # Individual widget components
+│   │   │   ├── location-selector.js
+│   │   │   ├── forecast-summary.js
+│   │   │   ├── alerts.js
+│   │   │   ├── discussion.js
+│   │   │   ├── tides.js
+│   │   │   └── observations.js
 │   │   └── utils/             # Utility functions
+│   │       ├── cache.js       # Client-side caching
+│   │       └── http.js        # HTTP client with retry logic
 │   ├── css/
 │   │   ├── main.css           # Core styles
 │   │   └── widgets.css        # Widget-specific styles
 │   ├── data/
 │   │   ├── zones.json         # Marine zone definitions
-│   │   └── endpoints.json     # API endpoint templates
+│   │   ├── endpoints.json     # API endpoint templates
+│   │   └── tide-stations.json # Tide station mappings
+│   ├── manifest.json          # PWA manifest
 │   └── index.html
+├── functions/
+│   └── marine-forecast.js     # Netlify function for NOAA proxy
 ├── scripts/
-│   ├── build-zones.js         # Generate zone data
+│   ├── build.js               # Build script
 │   └── deploy.js              # Deployment script
+├── netlify.toml               # Netlify configuration
 └── README.md
 ```
 
@@ -97,30 +118,36 @@ Parses NOAA text forecasts into structured data:
 - Warning/advisory extraction
 
 ### Widget System (`src/js/widgets/`)
-- **LocationSelector**: Zone picker with search
-- **ForecastSummary**: Parsed marine conditions
-- **Discussion**: Meteorologist insights
-- **Alerts**: Active warnings/advisories
-- **Tides**: High/low tide information
-- **Observations**: Latest buoy data
+- **LocationSelector**: Region/zone picker with dropdown interface
+- **ForecastSummary**: Parsed marine conditions with zone-specific display
+- **Discussion**: Meteorologist insights from Area Forecast Discussions
+- **Alerts**: Active warnings/advisories with real-time updates
+- **Tides**: High/low tide information for regional tide stations
+- **Observations**: Latest buoy data from NDBC stations
 
 ### Data Flow
-1. User selects marine zone (stored locally)
-2. App fetches NOAA data directly from public APIs
-3. Client-side parsing and summarization
-4. Display formatted results
-5. Cache responses for performance
+1. User selects marine region, then specific zone (stored locally)
+2. App fetches NOAA data via secure Netlify proxy functions
+3. Client-side parsing and zone-specific extraction
+4. Display formatted results with caching
+5. Real-time updates every 30 minutes when active
 
 ## Configuration
 
 ### Marine Zones
-Add zones to `src/data/zones.json`:
+The app uses a structured zone configuration in `src/data/zones.json`:
 ```json
 {
-  "PKZ125": {
-    "name": "Lynn Canal",
-    "office": "AJK",
-    "region": "Southeast Alaska"
+  "regions": {
+    "southeast": {
+      "name": "Southeast Alaska",
+      "forecastFile": "FZAK51.PAJK",
+      "office": "AJK",
+      "zones": {
+        "PKZ125": "Prince William Sound",
+        "PKZ126": "Glacier Bay"
+      }
+    }
   }
 }
 ```
@@ -129,9 +156,14 @@ Add zones to `src/data/zones.json`:
 Configure in `src/data/endpoints.json`:
 ```json
 {
-  "cwf": "https://tgftp.nws.noaa.gov/data/raw/fz/",
-  "afd": "https://forecast.weather.gov/product.php",
-  "tides": "https://tidesandcurrents.noaa.gov/api/"
+  "alerts": {
+    "baseUrl": "https://api.weather.gov/alerts",
+    "format": "?area=AK&urgency=Expected,Immediate&severity=Minor,Moderate,Severe,Extreme&status=Actual"
+  },
+  "tides": {
+    "baseUrl": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
+    "format": "?begin_date={date}&end_date={date}&station={station}&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&format=json"
+  }
 }
 ```
 
@@ -143,6 +175,13 @@ Strict CSP allows only necessary domains:
 - `tidesandcurrents.noaa.gov` (tide data)
 - `api.weather.gov` (alerts)
 - `www.ndbc.noaa.gov` (buoy data)
+- `fonts.googleapis.com` (web fonts)
+
+### Netlify Functions Security
+- Rate limiting: 60 requests/hour per IP
+- Zone ID validation against whitelist
+- CORS headers properly configured
+- No sensitive data exposure
 
 ### No External Dependencies
 All assets self-hosted to prevent tracking and ensure reliability.
@@ -195,4 +234,4 @@ For issues or questions:
 
 ---
 
-**Bight Watch** - Keeping mariners informed and safe in Alaska waters
+**Boat Safe** - Keeping mariners informed and safe in Alaska waters

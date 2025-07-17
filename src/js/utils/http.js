@@ -3,8 +3,15 @@
  */
 class HttpClient {
     constructor() {
-        this.cache = window.BightWatch.cache;
         this.baseTimeout = 10000; // 10 seconds
+    }
+
+    /**
+     * Get cache instance (lazy initialization)
+     * @returns {Cache} Cache instance
+     */
+    getCache() {
+        return window.BoatSafe?.cache || null;
     }
 
     /**
@@ -25,9 +32,12 @@ class HttpClient {
         
         // Check cache first
         if (!skipCache) {
-            const cachedData = this.cache.get(cacheKey);
-            if (cachedData) {
-                return cachedData;
+            const cache = this.getCache();
+            if (cache) {
+                const cachedData = cache.get(cacheKey);
+                if (cachedData) {
+                    return cachedData;
+                }
             }
         }
 
@@ -39,7 +49,10 @@ class HttpClient {
                 
                 // Cache successful response
                 if (cacheTTL > 0) {
-                    this.cache.set(cacheKey, data, cacheTTL);
+                    const cache = this.getCache();
+                    if (cache) {
+                        cache.set(cacheKey, data, cacheTTL);
+                    }
                 }
                 
                 return data;
@@ -140,7 +153,8 @@ class HttpClient {
      */
     getRequestStatus(url) {
         const cacheKey = this.getCacheKey(url);
-        const cached = this.cache.get(cacheKey);
+        const cache = this.getCache();
+        const cached = cache ? cache.get(cacheKey) : null;
         
         return {
             url,
@@ -152,5 +166,5 @@ class HttpClient {
 }
 
 // Global HTTP client instance
-window.BightWatch = window.BightWatch || {};
-window.BightWatch.http = new HttpClient();
+window.BoatSafe = window.BoatSafe || {};
+window.BoatSafe.http = new HttpClient();

@@ -1,33 +1,110 @@
 {
   "regions": {
-    "southeast": {
-      "name": "Southeast Alaska",
-      "forecastFile": "FZAK51.PAJK",
+    "se_inner": {
+      "name": "SE Inner Coastal Waters",
+      "forecastUrl": "https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt",
       "office": "AJK",
       "zones": {
-        "PKZ011": "Southeast Alaska Inside Waters from Dixon Entrance to Skagway",
-        "PKZ012": "Southeast Alaska Coastal Waters from Dixon Entrance to Cape Fairweather", 
-        "PKZ013": "Southeast Alaska Offshore Waters from Dixon Entrance to Cape Fairweather",
-        "PKZ126": "Glacier Bay",
-        "PKZ127": "Icy Strait",
-        "PKZ128": "Cross Sound",
-        "PKZ129": "Chatham Strait",
-        "PKZ130": "Frederick Sound",
-        "PKZ131": "Stephens Passage"
+        "PKZ098": "Southeast Alaska Inner Channels Coastal Waters",
+        "PKZ011": "Glacier Bay",
+        "PKZ012": "Northern Lynn Canal",
+        "PKZ013": "Southern Lynn Canal",
+        "PKZ021": "Icy Strait",
+        "PKZ022": "Cross Sound",
+        "PKZ031": "Stephens Passage",
+        "PKZ032": "Northern Chatham Strait",
+        "PKZ033": "Southern Chatham Strait",
+        "PKZ034": "Frederick Sound",
+        "PKZ035": "Sumner Strait",
+        "PKZ036": "Clarence Strait"
       }
     },
-    "southcentral": {
-      "name": "Southcentral Alaska",
-      "forecastFile": "FZAK51.PAFC",
+    "se_outside": {
+      "name": "SE Outside Coastal Waters",
+      "forecastUrl": "https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt",
+      "office": "AJK",
+      "zones": {
+        "PKZ641": "Dixon Entrance to Cape Decision out to 15 NM",
+        "PKZ661": "Dixon Entrance to Cape Decision from 15 to 90 NM",
+        "PKZ642": "Cape Decision to Cape Edgecumbe out to 15 NM",
+        "PKZ662": "Cape Decision to Cape Edgecumbe from 15 to 80 NM",
+        "PKZ643": "Cape Edgecumbe to Cape Spencer out to 15 NM",
+        "PKZ663": "Cape Edgecumbe to Cape Spencer from 15 to 80 NM",
+        "PKZ644": "Cape Spencer to Cape Fairweather out to 15 NM",
+        "PKZ664": "Cape Spencer to Cape Fairweather from 15 to 85 NM",
+        "PKZ651": "Cape Fairweather to Icy Cape out to 15 NM",
+        "PKZ671": "Cape Fairweather to Icy Cape from 15 to 80 NM",
+        "PKZ652": "Icy Cape to Cape Suckling out to 15 NM",
+        "PKZ672": "Icy Cape to Cape Suckling from 15 to 80 NM"
+      }
+    },
+    "yakutat": {
+      "name": "Yakutat Bay",
+      "forecastUrl": "https://tgftp.nws.noaa.gov/data/raw/fz/fzak53.pajk.cwf.yak.txt",
+      "office": "AJK",
+      "zones": {
+        "PKZ053": "Yakutat Bay"
+      }
+    },
+    "north_gulf": {
+      "name": "North Gulf Coast Kodiak and Cook Inlet",
+      "forecastUrl": "https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt",
       "office": "AFC",
       "zones": {
-        "PKZ125": "Prince William Sound",
-        "PKZ170": "Cook Inlet",
-        "PKZ171": "Kachemak Bay",
-        "PKZ172": "Shelikof Strait",
-        "PKZ173": "Kodiak Island Coastal Waters",
-        "PKZ174": "Alaska Peninsula Waters",
-        "PKZ150": "South of the Alaska Peninsula Sitkinak to Castle Cape"
+        "PKZ197": "North Gulf Coast, Kodiak Island Waters, Cook Inlet",
+        "PKZ710": "Cape Suckling to Gravel Point out to 15 NM",
+        "PKZ711": "Gravel Point to Cape Cleare out to 15 NM",
+        "PKZ712": "Cape Suckling to Cape Cleare from 15 to 75 NM",
+        "PKZ715": "Cape Cleare to Gore Point out to 15 NM",
+        "PKZ716": "Cape Cleare to Gore Point from 15 to 75 NM",
+        "PKZ714": "Resurrection Bay",
+        "PKZ724": "Northwest Prince William Sound",
+        "PKZ725": "Central and Eastern Prince William Sound",
+        "PKZ726": "Southwest Prince William Sound",
+        "PKZ720": "Port of Valdez",
+        "PKZ721": "Valdez Narrows",
+        "PKZ722": "Valdez Arm",
+        "PKZ723": "Passage Canal",
+        "PKZ730": "West of Barren Islands Including Kamishak Bay",
+        "PKZ731": "Barren Islands East",
+        "PKZ733": "Gore Point to Marmot Island from 15 to 80 NM",
+        "PKZ732": "Marmot Island to Sitkinak out to 15 NM",
+        "PKZ734": "Marmot Island To Sitkinak from 15 to 85 NM",
+        "PKZ736": "Chiniak Bay",
+        "PKZ737": "Marmot Bay",
+        "PKZ738": "Shelikof Strait",
+        "PKZ742": "Cook Inlet Kalgin Island to Point Bede",
+        "PKZ740": "Cook Inlet North of Kalgin Island",
+        "PKZ741": "Kachemak Bay"
+      }
+    },
+    "southwest_aleutians": {
+      "name": "Southwest AK and the Aleutians",
+      "forecastUrl": "https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt",
+      "office": "AFC",
+      "zones": {
+        "PKZ750": "Sitkinak to Castle Cape out to 15 NM",
+        "PKZ751": "Sitkinak to Castle Cape from 15 to 100 NM",
+        "PKZ752": "Castle Cape to Cape Tolstoi out to 15 NM",
+        "PKZ753": "Castle Cape to Cape Tolstoi from 15 to 100 NM",
+        "PKZ754": "Cape Tolstoi to Cape Sarichef out to 15 NM",
+        "PKZ755": "Cape Tolstoi to Cape Sarichef from 15 to 100 NM",
+        "PKZ756": "Port Heiden to Nelson Lagoon out to 15 NM",
+        "PKZ757": "Port Heiden to Nelson Lagoon from 15 to 60 NM",
+        "PKZ758": "Nelson Lagoon to Cape Sarichef out to 15 NM",
+        "PKZ759": "Nelson Lagoon to Cape Sarichef from 15 to 70 NM",
+        "PKZ770": "Cape Sarichef to Nikolski Bering Side out to 15 NM",
+        "PKZ772": "Cape Sarichef to Nikolski Bering Side from 15 to 85 NM",
+        "PKZ771": "Unalaska Bay",
+        "PKZ773": "Cape Sarichef to Nikolski Pacific Side out to 15 NM",
+        "PKZ774": "Cape Sarichef to Nikolski Pacific Side from 15 to 85 NM",
+        "PKZ775": "Nikolski to Seguam Bering Side out to 15 NM",
+        "PKZ776": "Nikolski to Seguam Bering Side from 15 to 85 NM",
+        "PKZ777": "Nikolski to Seguam Pacific Side out to 15 NM",
+        "PKZ778": "Nikolski to Seguam Pacific Side from 15 to 75 NM",
+        "PKZ780": "Seguam to Adak Bering Side out to 15 NM",
+        "PKZ781": "Seguam to Adak Bering Side from 15 to 85 NM",
+        "PKZ782": "Seguam to Adak Pacific Side out to 15 NM"
       }
     }
   }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bight Watch - Alaska Marine Forecasts</title>
+    <title>Boat Safe - Alaska Marine Forecasts</title>
     <meta name="description" content="Privacy-first marine forecasts for Alaska waters. Get NOAA weather data, tide information, and marine conditions without tracking.">
     
     <!-- Security Headers -->
@@ -33,7 +33,7 @@
             <div class="container">
                 <h1 class="app-title">
                     <img src="oceanbightlogo.png" alt="Ocean Bight" class="logo">
-                    Bight Watch
+                    Boat Safe
                 </h1>
                 <p class="app-subtitle">Alaska Marine Forecasts</p>
             </div>
@@ -42,34 +42,23 @@
         <!-- Main Content -->
         <main class="app-main">
             <div class="container">
-                <!-- Location Selector -->
-                <section class="widget-container">
-                    <div id="location-selector" class="widget">
-                        <h2>Select Marine Region</h2>
-                        <div class="location-content">
-                            <div class="dropdown-container">
-                                <label for="region-dropdown" class="dropdown-label">Choose a marine region:</label>
-                                <select id="region-dropdown" class="region-dropdown">
-                                    <option value="">Select a region...</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Forecast Summary -->
+                <!-- Marine Forecast -->
                 <section class="widget-container">
                     <div id="forecast-summary" class="widget">
                         <h2>Marine Forecast</h2>
                         <div class="forecast-content">
                             <div class="zone-selector">
-                                <label for="zone-dropdown" class="dropdown-label">Select specific zone:</label>
+                                <label for="region-dropdown" class="dropdown-label">Select region:</label>
+                                <select id="region-dropdown" class="region-dropdown">
+                                    <option value="">Select a region...</option>
+                                </select>
+                                <label for="zone-dropdown" class="dropdown-label">Select zone:</label>
                                 <select id="zone-dropdown" class="zone-dropdown">
                                     <option value="">Select a region first...</option>
                                 </select>
                             </div>
                             <div class="forecast-display">
-                                <div class="loading">Select a region to view forecast</div>
+                                <div class="loading">Select a region and zone to view forecast</div>
                             </div>
                         </div>
                     </div>
