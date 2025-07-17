@@ -353,14 +353,14 @@ class Observations {
             { key: 'PRES', label: 'Pressure', unit: 'hPa' }
         ];
 
-        // Format observations into a single text block like marine forecast
-        const observationText = keyFields.map(field => {
+        // Format observations as separate lines for better readability
+        const observationLines = keyFields.map(field => {
             const fieldData = data.data[field.key];
             const value = fieldData ? fieldData.value : 'N/A';
             const unit = fieldData ? fieldData.unit : field.unit;
             const displayValue = value === 'MM' ? 'N/A' : value;
-            return `${field.label}: ${displayValue} ${unit}`;
-        }).join(' | ');
+            return `<div class="observation-line">${field.label}: <span class="observation-value">${displayValue} ${unit}</span></div>`;
+        }).join('');
 
         const html = `
             <div class="forecast-period">
@@ -368,8 +368,8 @@ class Observations {
                     <strong>${data.stationId} - ${data.stationName}</strong>
                     <span class="period-time">${this.formatTime(data.timestamp)}</span>
                 </div>
-                <div class="forecast-text">
-                    ${observationText}
+                <div class="forecast-text observation-data">
+                    ${observationLines}
                 </div>
                 <div class="station-link">
                     <a href="https://www.ndbc.noaa.gov/station_page.php?station=${data.stationId}" 

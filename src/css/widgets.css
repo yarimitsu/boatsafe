@@ -483,8 +483,13 @@
     white-space: pre-wrap;
 }
 
-.discussion-text p {
-    margin-bottom: var(--spacing-3);
+.discussion-text p, .forecast-text p {
+    margin-bottom: var(--spacing-4);
+    line-height: 1.7;
+}
+
+.discussion-text p:last-child, .forecast-text p:last-child {
+    margin-bottom: 0;
 }
 
 .discussion-text strong {
@@ -498,10 +503,18 @@
     font-weight: 500;
 }
 
-.discussion-text .wind-direction {
+.discussion-text .wind-direction, .forecast-text .wind-direction {
     color: var(--primary-blue);
     font-weight: 500;
     background-color: rgba(59, 130, 246, 0.1);
+    padding: 0.1em 0.3em;
+    border-radius: 0.25em;
+}
+
+.discussion-text .weather-measurement, .forecast-text .weather-measurement {
+    color: var(--accent-teal);
+    font-weight: 500;
+    background-color: rgba(13, 148, 136, 0.1);
     padding: 0.1em 0.3em;
     border-radius: 0.25em;
 }
@@ -598,7 +611,7 @@
 .tide-type {
     font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--gray-600);
+    color: var(--text-primary);
     text-transform: uppercase;
 }
 
@@ -611,6 +624,49 @@
 .tide-height {
     font-weight: 600;
     color: var(--accent-teal);
+}
+
+.tide-date-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+    padding: var(--spacing-3);
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(15, 37, 53, 0.3);
+    backdrop-filter: blur(5px);
+}
+
+.tide-date-navigation .prev-day,
+.tide-date-navigation .next-day {
+    background: none;
+    border: var(--border-width) solid var(--glass-border);
+    color: var(--text-primary);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-size-base);
+    transition: all var(--transition-fast);
+    min-width: 40px;
+    backdrop-filter: blur(5px);
+}
+
+.tide-date-navigation .prev-day:hover,
+.tide-date-navigation .next-day:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--button-text-dark);
+    box-shadow: 0 0 10px var(--ice-glow);
+}
+
+.tide-date-navigation .current-date {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    min-width: 200px;
+    font-size: var(--font-size-base);
 }
 
 /* Observations Widget */
@@ -938,5 +994,22 @@
     
     .tide-events {
         grid-template-columns: 1fr;
+    }
+    
+    .tide-date-navigation {
+        gap: var(--spacing-2);
+        padding: var(--spacing-2);
+    }
+    
+    .tide-date-navigation .current-date {
+        min-width: 150px;
+        font-size: var(--font-size-sm);
+    }
+    
+    .tide-date-navigation .prev-day,
+    .tide-date-navigation .next-day {
+        padding: var(--spacing-1) var(--spacing-2);
+        font-size: var(--font-size-sm);
+        min-width: 32px;
     }
 }

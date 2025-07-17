@@ -117,35 +117,155 @@ class Discussion {
     formatText(text) {
         if (!text) return '';
         
-        // Clean and format AFD text
-        let formatted = text
-            // Remove excessive whitespace
+        // Clean unwanted content first
+        let cleanedText = text
+            // Remove USA.gov references and associated bullet points
+            .replace(/usa\.gov[^\n]*/gi, '')
+            // Remove bullet points that often appear after usa.gov references
+            .replace(/^\s*[•·\-\*]\s*[^\n]*$/gm, '')
+            // Remove excessive whitespace and normalize line breaks
             .replace(/\s+/g, ' ')
-            // Split into paragraphs on double line breaks
-            .split('\n\n')
-            .map(paragraph => paragraph.trim())
-            .filter(paragraph => paragraph.length > 0)
-            // Wrap each paragraph in <p> tags
-            .map(paragraph => `<p>${paragraph}</p>`)
+            .replace(/\n\s*\n/g, '\n\n')
+            .trim();
+
+        // Smart paragraph breaking for meteorological discussions
+        let paragraphs = [];
+        
+        // First try splitting on double line breaks
+        let initialSplit = cleanedText.split(/\n\n+/);
+        
+        if (initialSplit.length === 1) {
+            // No double line breaks found, use intelligent breaking
+            let sentences = cleanedText.split(/\.\s+/);
+            let currentParagraph = '';
+            
+            for (let i = 0; i < sentences.length; i++) {
+                let sentence = sentences[i].trim();
+                if (!sentence) continue;
+                
+                // Add period back unless it's the last sentence
+                if (i < sentences.length - 1) {
+                    sentence += '.';
+                }
+                
+                // Start new paragraph on certain meteorological keywords
+                if (this.shouldStartNewParagraph(sentence, currentParagraph)) {
+                    if (currentParagraph.trim()) {
+                        paragraphs.push(currentParagraph.trim());
+                    }
+                    currentParagraph = sentence;
+                } else {
+                    currentParagraph += (currentParagraph ? ' ' : '') + sentence;
+                }
+                
+                // Break long paragraphs (more than 4 sentences)
+                if (currentParagraph.split(/\.\s+/).length >= 4) {
+                    paragraphs.push(currentParagraph.trim());
+                    currentParagraph = '';
+                }
+            }
+            
+            // Add remaining content
+            if (currentParagraph.trim()) {
+                paragraphs.push(currentParagraph.trim());
+            }
+        } else {
+            // Use existing double line break splits but clean them
+            paragraphs = initialSplit
+                .map(p => p.trim())
+                .filter(p => p.length > 10); // Filter out very short fragments
+        }
+        
+        // Format paragraphs with proper HTML
+        let formatted = paragraphs
+            .map(paragraph => {
+                // Further break very long paragraphs at sentence boundaries
+                if (paragraph.length > 800) {
+                    return this.breakLongParagraph(paragraph);
+                }
+                return `<p>${paragraph}</p>`;
+            })
             .join('');
         
-        // If no paragraphs were created, treat as single block
-        if (!formatted.includes('<p>')) {
-            formatted = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+        // Fallback for edge cases
+        if (!formatted || paragraphs.length === 0) {
+            formatted = `<p>${cleanedText.replace(/\n/g, '<br>')}</p>`;
         }
         
         // Enhance formatting with weather terminology
         formatted = formatted
             // Highlight time periods
-            .replace(/\b(TODAY|TONIGHT|TOMORROW|THIS EVENING|THIS MORNING|THIS AFTERNOON)\b/gi, '<strong>$1</strong>')
+            .replace(/\b(TODAY|TONIGHT|TOMORROW|THIS EVENING|THIS MORNING|THIS AFTERNOON|SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY)\b/gi, '<strong>$1</strong>')
+            // Highlight weather systems and patterns
+            .replace(/\b(LOW PRESSURE|HIGH PRESSURE|FRONT|TROUGH|RIDGE|STORM SYSTEM|WEATHER SYSTEM)\b/gi, '<strong>$1</strong>')
             // Highlight weather conditions
-            .replace(/\b(RAIN|SNOW|THUNDERSTORMS|FOG|WIND|GALE|STORM|CLEAR|CLOUDY|PARTLY CLOUDY)\b/gi, '<em>$1</em>')
+            .replace(/\b(RAIN|SNOW|THUNDERSTORMS|FOG|WIND|GALE|STORM|CLEAR|CLOUDY|PARTLY CLOUDY|OVERCAST|SHOWERS|DRIZZLE)\b/gi, '<em>$1</em>')
             // Highlight marine conditions  
-            .replace(/\b(SEAS|WAVES|SWELL|CHOPPY|ROUGH|CALM)\b/gi, '<em>$1</em>')
-            // Format wind directions
-            .replace(/\b([NSEW]|NE|NW|SE|SW|NORTH|SOUTH|EAST|WEST|NORTHEAST|NORTHWEST|SOUTHEAST|SOUTHWEST)\b/gi, '<span class="wind-direction">$1</span>');
+            .replace(/\b(SEAS|WAVES|SWELL|CHOPPY|ROUGH|CALM|SURF|BREAKERS)\b/gi, '<em>$1</em>')
+            // Format wind directions with better styling
+            .replace(/\b([NSEW]|NE|NW|SE|SW|NORTH|SOUTH|EAST|WEST|NORTHEAST|NORTHWEST|SOUTHEAST|SOUTHWEST)\b/gi, '<span class="wind-direction">$1</span>')
+            // Highlight wind speeds and weather measurements
+            .replace(/\b(\d+\s*(?:MPH|KT|KNOTS?|FT|FEET|INCHES?|IN))\b/gi, '<span class="weather-measurement">$1</span>');
         
         return formatted;
+    }
+
+    /**
+     * Determine if a new paragraph should be started based on content
+     * @param {string} sentence - Current sentence
+     * @param {string} currentParagraph - Current paragraph content
+     * @returns {boolean} Whether to start a new paragraph
+     */
+    shouldStartNewParagraph(sentence, currentParagraph) {
+        if (!currentParagraph) return false;
+        
+        // Keywords that typically start new discussion sections
+        const newSectionKeywords = [
+            'SYNOPSIS', 'DISCUSSION', 'TONIGHT', 'TOMORROW', 'SUNDAY', 'MONDAY', 
+            'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
+            'MARINE', 'AVIATION', 'FIRE WEATHER', 'SHORT TERM', 'LONG TERM',
+            'NEAR TERM', 'EXTENDED'
+        ];
+        
+        const upperSentence = sentence.toUpperCase();
+        return newSectionKeywords.some(keyword => 
+            upperSentence.startsWith(keyword) || 
+            upperSentence.startsWith(keyword + '...')
+        );
+    }
+
+    /**
+     * Break long paragraphs into smaller, more readable chunks
+     * @param {string} paragraph - Long paragraph to break
+     * @returns {string} HTML with multiple paragraphs
+     */
+    breakLongParagraph(paragraph) {
+        const sentences = paragraph.split(/\.\s+/);
+        const chunks = [];
+        let currentChunk = '';
+        
+        for (let i = 0; i < sentences.length; i++) {
+            let sentence = sentences[i].trim();
+            if (!sentence) continue;
+            
+            // Add period back unless it's the last sentence
+            if (i < sentences.length - 1) {
+                sentence += '.';
+            }
+            
+            if (currentChunk && (currentChunk + ' ' + sentence).length > 400) {
+                chunks.push(currentChunk.trim());
+                currentChunk = sentence;
+            } else {
+                currentChunk += (currentChunk ? ' ' : '') + sentence;
+            }
+        }
+        
+        if (currentChunk.trim()) {
+            chunks.push(currentChunk.trim());
+        }
+        
+        return chunks.map(chunk => `<p>${chunk}</p>`).join('');
     }
 
     /**
