@@ -1,11 +1,67 @@
 /**
- * Observations Widget - Buoy Observations
+ * Observations Widget - NDBC Alaska Buoy Observations
  */
 class Observations {
     constructor() {
         this.container = document.getElementById('observations');
         this.content = this.container.querySelector('.observations-content');
+        this.stationDropdown = document.getElementById('station-dropdown');
+        this.observationsDisplay = this.container.querySelector('.observations-display');
         this.currentData = null;
+        this.selectedStation = null;
+        
+        // Alaska NDBC stations
+        this.stations = {
+            // Offshore Buoy Stations
+            '46001': 'WESTERN GULF OF ALASKA',
+            '46004': 'Middle Nomad',
+            '46035': 'CENTRAL BERING SEA',
+            '46036': 'South Nomad',
+            '46060': 'WEST ORCA BAY',
+            '46061': 'Seal Rocks',
+            '46066': 'SOUTH KODIAK',
+            '46072': 'CENTRAL ALEUTIANS',
+            '46073': 'SOUTHEAST BERING SEA',
+            '46075': 'SHUMAGIN ISLANDS',
+            '46076': 'CAPE CLEARE',
+            '46077': 'SHELIKOF STRAIT',
+            '46078': 'ALBATROSS BANK',
+            '46080': 'PORTLOCK BANK',
+            '46081': 'Western Prince William Sound',
+            '46082': 'Cape Suckling',
+            '46083': 'FAIRWEATHER GROUND',
+            '46084': 'CAPE EDGECUMBE',
+            '46085': 'CENTRAL GULF OF ALASKA',
+            '46108': 'Lower Cook Inlet',
+            '46131': 'Sentry Shoal',
+            '46132': 'South Brooks',
+            '46145': 'Central Dixon Entrance Buoy',
+            '46146': 'Halibut Bank',
+            '46147': 'South Moresby',
+            '46181': 'Nanakwa Shoal',
+            '46183': 'North Hecate Strait',
+            '46184': 'North Nomad',
+            '46185': 'South Hecate Strait',
+            '46204': 'West Sea Otter',
+            '46205': 'West Dixon Entrance',
+            '46206': 'La Perouse Bank',
+            '46207': 'East Dellwood',
+            '46208': 'West Moresby',
+            '46246': 'Ocean Station PAPA',
+            '46267': 'Angeles Point',
+            '46303': 'Southern Georgia Strait',
+            '46304': 'Entrance To English Bay',
+            
+            // Coastal/Land Stations
+            'ABYA2': 'Auke Bay Lab Dock',
+            'ADKA2': 'Adak Island',
+            'AJXA2': 'Juneau AJ Dock',
+            'AKXA2': 'Akutan',
+            'ANTA2': 'Anchorage',
+            'NMTA2': 'Nome',
+            'UNLA2': 'Unalaska',
+            'UQXA2': 'Utqiagvik'
+        };
         
         this.init();
     }
@@ -14,126 +70,260 @@ class Observations {
      * Initialize the widget
      */
     init() {
+        this.populateStationDropdown();
+        this.setupEventListeners();
         this.showLoading();
     }
 
     /**
-     * Update widget with observations data
-     * @param {Array} data - Array of observation data
+     * Populate station dropdown
      */
-    update(data) {
-        this.currentData = data;
-        this.render();
+    populateStationDropdown() {
+        if (!this.stationDropdown) return;
+
+        this.stationDropdown.innerHTML = '<option value="">Select a station...</option>';
+        
+        Object.entries(this.stations).forEach(([stationId, stationName]) => {
+            const option = document.createElement('option');
+            option.value = stationId;
+            option.textContent = `${stationId} - ${stationName}`;
+            this.stationDropdown.appendChild(option);
+        });
+    }
+
+    /**
+     * Set up event listeners
+     */
+    setupEventListeners() {
+        if (this.stationDropdown) {
+            this.stationDropdown.addEventListener('change', (e) => {
+                const stationId = e.target.value;
+                if (stationId) {
+                    this.selectStation(stationId);
+                } else {
+                    this.showLoading();
+                }
+            });
+        }
+    }
+
+    /**
+     * Select and load station observations
+     * @param {string} stationId - Station ID
+     */
+    async selectStation(stationId) {
+        if (!stationId) {
+            this.showLoading();
+            return;
+        }
+
+        this.selectedStation = stationId;
+        this.showLoading(`Loading observations for ${stationId}...`);
+
+        try {
+            const currentHost = window.location.origin;
+            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
+            
+            if (isLocal) {
+                // Local development - show placeholder
+                this.showLocalDevPlaceholder(stationId);
+            } else {
+                // Production - fetch real data
+                const data = await this.fetchStationData(stationId);
+                this.currentData = data;
+                this.render();
+            }
+            
+            // Save station preference
+            try {
+                localStorage.setItem('boatsafe_selected_station', stationId);
+            } catch (error) {
+                console.warn('Failed to save station preference:', error);
+            }
+        } catch (error) {
+            console.error('Failed to load station observations:', error);
+            this.showError(`Failed to load observations for ${stationId}`);
+        }
+    }
+
+    /**
+     * Fetch station data from NDBC
+     * @param {string} stationId - Station ID
+     * @returns {Promise} Station data
+     */
+    async fetchStationData(stationId) {
+        // NDBC real-time data URL
+        const url = `https://www.ndbc.noaa.gov/data/realtime2/${stationId}.txt`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const text = await response.text();
+            return this.parseNDBCData(text, stationId);
+        } catch (error) {
+            console.error('NDBC fetch error:', error);
+            throw new Error('Unable to fetch station data');
+        }
+    }
+
+    /**
+     * Parse NDBC data format
+     * @param {string} text - Raw NDBC data
+     * @param {string} stationId - Station ID
+     * @returns {Object} Parsed data
+     */
+    parseNDBCData(text, stationId) {
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 3) {
+            throw new Error('Invalid NDBC data format');
+        }
+        
+        const headerLine = lines[0];
+        const unitLine = lines[1];
+        const dataLine = lines[2]; // Most recent data
+        
+        const headers = headerLine.split(/\s+/);
+        const units = unitLine.split(/\s+/);
+        const values = dataLine.split(/\s+/);
+        
+        // Create data object
+        const data = {};
+        headers.forEach((header, index) => {
+            data[header] = {
+                value: values[index] || 'N/A',
+                unit: units[index] || ''
+            };
+        });
+        
+        return {
+            stationId,
+            stationName: this.stations[stationId] || stationId,
+            timestamp: this.parseTimestamp(data),
+            data: data
+        };
+    }
+
+    /**
+     * Parse timestamp from NDBC data
+     * @param {Object} data - Parsed data object
+     * @returns {Date} Timestamp
+     */
+    parseTimestamp(data) {
+        try {
+            const year = parseInt(data.YY?.value || data.YYYY?.value) || new Date().getFullYear();
+            const month = parseInt(data.MM?.value) || 1;
+            const day = parseInt(data.DD?.value) || 1;
+            const hour = parseInt(data.hh?.value) || 0;
+            const minute = parseInt(data.mm?.value) || 0;
+            
+            return new Date(year, month - 1, day, hour, minute);
+        } catch (error) {
+            return new Date();
+        }
+    }
+
+    /**
+     * Show local development placeholder
+     * @param {string} stationId - Station ID
+     */
+    showLocalDevPlaceholder(stationId) {
+        const stationName = this.stations[stationId] || stationId;
+        
+        const html = `
+            <div class="station-data">
+                <div class="station-header">
+                    <strong>${stationId} - ${stationName}</strong>
+                    <div class="station-time">Local Development Mode</div>
+                </div>
+                <div class="observation-items">
+                    <div class="observation-item">
+                        <span class="label">Wind Speed:</span>
+                        <span class="value">-- kt</span>
+                    </div>
+                    <div class="observation-item">
+                        <span class="label">Wind Direction:</span>
+                        <span class="value">-- °</span>
+                    </div>
+                    <div class="observation-item">
+                        <span class="label">Wave Height:</span>
+                        <span class="value">-- m</span>
+                    </div>
+                    <div class="observation-item">
+                        <span class="label">Air Temperature:</span>
+                        <span class="value">-- °C</span>
+                    </div>
+                    <div class="observation-item">
+                        <span class="label">Pressure:</span>
+                        <span class="value">-- hPa</span>
+                    </div>
+                </div>
+                <div class="local-dev-note">
+                    <em>Deploy to Netlify to see real buoy data</em>
+                </div>
+            </div>
+        `;
+        
+        if (this.observationsDisplay) {
+            this.observationsDisplay.innerHTML = html;
+        }
     }
 
     /**
      * Render the observations
      */
     render() {
-        if (!this.currentData || this.currentData.length === 0) {
+        if (!this.currentData) {
             this.showError('No observation data available');
             return;
         }
 
-        const html = `
-            <div class="observation-stations">
-                ${this.currentData.map(station => this.renderStation(station)).join('')}
-            </div>
-        `;
-
-        this.content.innerHTML = html;
-    }
-
-    /**
-     * Render individual observation station
-     * @param {string} rawData - Raw observation data
-     * @returns {string} HTML string
-     */
-    renderStation(rawData) {
-        const parsed = this.parseObservationData(rawData);
+        const data = this.currentData;
         
-        if (!parsed) {
-            return '<div class="status-message status-error">Failed to parse observation data</div>';
-        }
-
-        return `
-            <div class="observation-station">
-                <div class="station-header">
-                    <div class="station-name">${parsed.stationName}</div>
-                    <div class="station-time">${this.formatTime(parsed.time)}</div>
-                </div>
-                <div class="observation-data">
-                    ${this.renderObservationItems(parsed.data)}
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Parse raw observation data
-     * @param {string} rawData - Raw data string
-     * @returns {Object|null} Parsed data
-     */
-    parseObservationData(rawData) {
-        if (!rawData || typeof rawData !== 'string') return null;
-        
-        const lines = rawData.split('\n').filter(line => line.trim());
-        
-        if (lines.length < 2) return null;
-        
-        // This is a simplified parser - in production, you'd need more robust NDBC parsing
-        const headerLine = lines[0];
-        const dataLine = lines[lines.length - 1]; // Get most recent data
-        
-        try {
-            const stationMatch = headerLine.match(/Station\s+(\w+)/i);
-            const stationName = stationMatch ? stationMatch[1] : 'Unknown Station';
-            
-            // Parse data fields (simplified)
-            const fields = dataLine.split(/\s+/);
-            
-            return {
-                stationName,
-                time: new Date(),
-                data: {
-                    windSpeed: fields[6] || 'N/A',
-                    windDirection: fields[5] || 'N/A',
-                    waveHeight: fields[8] || 'N/A',
-                    wavePeriod: fields[9] || 'N/A',
-                    pressure: fields[12] || 'N/A',
-                    temperature: fields[13] || 'N/A'
-                }
-            };
-        } catch (error) {
-            console.error('Failed to parse observation data:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Render observation data items
-     * @param {Object} data - Observation data
-     * @returns {string} HTML string
-     */
-    renderObservationItems(data) {
-        const items = [
-            { label: 'Wind Speed', value: data.windSpeed, unit: 'kt' },
-            { label: 'Wind Dir', value: data.windDirection, unit: '°' },
-            { label: 'Wave Height', value: data.waveHeight, unit: 'ft' },
-            { label: 'Wave Period', value: data.wavePeriod, unit: 's' },
-            { label: 'Pressure', value: data.pressure, unit: 'mb' },
-            { label: 'Air Temp', value: data.temperature, unit: '°F' }
+        // Key observation fields
+        const keyFields = [
+            { key: 'WSPD', label: 'Wind Speed', unit: 'kt' },
+            { key: 'WDIR', label: 'Wind Direction', unit: '°' },
+            { key: 'WVHT', label: 'Wave Height', unit: 'm' },
+            { key: 'DPD', label: 'Dominant Wave Period', unit: 's' },
+            { key: 'ATMP', label: 'Air Temperature', unit: '°C' },
+            { key: 'WTMP', label: 'Water Temperature', unit: '°C' },
+            { key: 'PRES', label: 'Pressure', unit: 'hPa' }
         ];
-        
-        return items.map(item => `
-            <div class="observation-item">
-                <div class="observation-label">${item.label}</div>
-                <div class="observation-value">
-                    ${item.value}
-                    <span class="observation-unit">${item.unit}</span>
+
+        const html = `
+            <div class="station-data">
+                <div class="station-header">
+                    <strong>${data.stationId} - ${data.stationName}</strong>
+                    <div class="station-time">${this.formatTime(data.timestamp)}</div>
+                </div>
+                <div class="observation-items">
+                    ${keyFields.map(field => {
+                        const fieldData = data.data[field.key];
+                        const value = fieldData ? fieldData.value : 'N/A';
+                        const unit = fieldData ? fieldData.unit : field.unit;
+                        
+                        return `
+                            <div class="observation-item">
+                                <span class="label">${field.label}:</span>
+                                <span class="value">${value === 'MM' ? 'N/A' : value} ${unit}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="station-link">
+                    <a href="https://www.ndbc.noaa.gov/station_page.php?station=${data.stationId}" 
+                       target="_blank" rel="noopener">View Full Station Data →</a>
                 </div>
             </div>
-        `).join('');
+        `;
+
+        if (this.observationsDisplay) {
+            this.observationsDisplay.innerHTML = html;
+        }
     }
 
     /**
@@ -156,15 +346,16 @@ class Observations {
                 return date.toLocaleDateString();
             }
         } catch (error) {
-            return 'Unknown';
+            return date.toLocaleDateString();
         }
     }
 
     /**
      * Show loading state
      */
-    showLoading() {
-        this.content.innerHTML = '<div class="loading">Loading observations...</div>';
+    showLoading(message = 'Loading observations...') {
+        const content = this.observationsDisplay || this.content;
+        content.innerHTML = `<div class="loading">${message}</div>`;
     }
 
     /**
@@ -172,7 +363,8 @@ class Observations {
      * @param {string} message - Error message
      */
     showError(message) {
-        this.content.innerHTML = `
+        const content = this.observationsDisplay || this.content;
+        content.innerHTML = `
             <div class="status-message status-error">
                 <strong>Error:</strong> ${message}
             </div>
@@ -180,21 +372,12 @@ class Observations {
     }
 
     /**
-     * Clear widget content
+     * Update widget with observations data (legacy method)
+     * @param {Array} data - Array of observation data
      */
-    clear() {
-        this.currentData = null;
-        this.content.innerHTML = '<div class="loading">Loading observations...</div>';
-    }
-
-    /**
-     * Get latest observation
-     * @returns {Object|null} Latest observation data
-     */
-    getLatest() {
-        if (!this.currentData || this.currentData.length === 0) return null;
-        
-        return this.parseObservationData(this.currentData[0]);
+    update(data) {
+        // Legacy compatibility - not used in new implementation
+        console.log('Legacy update method called - using new station-based system');
     }
 }
 

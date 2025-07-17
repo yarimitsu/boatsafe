@@ -160,11 +160,46 @@ class ForecastSummary {
         try {
             // Fetch forecast data for this specific zone
             const currentHost = window.location.origin;
-            const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
+            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
             
-            console.log(`Fetching forecast for ${zoneId} from:`, proxyUrl);
-            
-            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
+            let data;
+            if (isLocal) {
+                // Local development - fetch directly from NOAA (may have CORS issues)
+                const directUrl = this.getDirectNOAAUrl(zoneId);
+                console.log(`Local dev: fetching ${zoneId} directly from NOAA:`, directUrl);
+                
+                try {
+                    const response = await fetch(directUrl);
+                    const text = await response.text();
+                    data = {
+                        properties: {
+                            updated: new Date().toISOString(),
+                            periods: [{
+                                name: 'Marine Forecast',
+                                detailedForecast: text,
+                                shortForecast: `Marine conditions for zone ${zoneId.toUpperCase()}`
+                            }]
+                        }
+                    };
+                } catch (corsError) {
+                    console.warn('CORS error in local dev, showing placeholder:', corsError);
+                    data = {
+                        properties: {
+                            updated: new Date().toISOString(),
+                            periods: [{
+                                name: 'Marine Forecast',
+                                detailedForecast: `LOCAL DEVELOPMENT MODE\n\nForecast for ${zoneId} would appear here.\n\nDeploy to Netlify to see real forecast data.`,
+                                shortForecast: `Local dev mode - ${zoneId.toUpperCase()}`
+                            }]
+                        }
+                    };
+                }
+            } else {
+                // Production - use Netlify function
+                const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
+                console.log(`Fetching forecast for ${zoneId} from:`, proxyUrl);
+                data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
+            }
             
             console.log('Received data:', data);
             
@@ -472,6 +507,95 @@ class ForecastSummary {
         });
         
         return text;
+    }
+
+    /**
+     * Get direct NOAA URL for zone (for local development)
+     * @param {string} zoneId - Zone ID
+     * @returns {string} Direct NOAA URL
+     */
+    getDirectNOAAUrl(zoneId) {
+        const zoneToUrl = {
+            // SE Inner Coastal Waters
+            'PKZ098': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ011': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ012': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ013': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ021': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ022': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ031': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ032': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ033': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ034': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ035': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            'PKZ036': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
+            // SE Outside Coastal Waters
+            'PKZ641': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ661': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ642': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ662': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ643': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ663': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ644': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ664': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ651': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ671': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ652': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            'PKZ672': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
+            // Yakutat Bay
+            'PKZ053': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak53.pajk.cwf.yak.txt',
+            // North Gulf Coast
+            'PKZ197': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ710': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ711': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ712': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ715': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ716': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ714': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ724': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ725': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ726': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ720': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ721': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ722': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ723': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ730': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ731': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ733': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ732': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ734': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ736': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ737': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ738': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ742': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ740': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            'PKZ741': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
+            // Southwest AK and Aleutians
+            'PKZ750': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ751': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ752': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ753': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ754': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ755': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ756': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ757': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ758': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ759': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ770': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ772': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ771': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ773': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ774': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ775': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ776': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ777': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ778': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ780': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ781': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
+            'PKZ782': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt'
+        };
+        
+        return zoneToUrl[zoneId.toUpperCase()] || 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt';
     }
 
     /**
