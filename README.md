@@ -1,32 +1,30 @@
 # Boat Safe
 **A Marine Forecast App for Alaska Waters**
 
-
 ## Features
 
-- **Location-Specific Forecasts**: Select from Southeast and Southcentral Alaska marine zones
-- **Smart Summarization**: Converts technical NOAA forecasts into actionable marine conditions
-- **Forecaster Insights**: Key points from meteorologist discussions (AFD)
-- **Real-Time Alerts**: Marine warnings and advisories
-- **Privacy-First**: No tracking, no data collection, no external dependencies
+- **Comprehensive Coverage**: 5 Alaska marine regions with 70+ individual zones
+- **Real-Time Buoy Data**: 48 Alaska NDBC stations with current conditions
+- **Zone-Specific Forecasts**: NOAA marine forecasts for exact locations
+- **Low-Bandwidth Optimized**: Fast loading for intermittent cell service
+- **Privacy-First**: No tracking, no data collection, client-side only
 - **Mobile-Optimized**: Responsive design for phones and tablets
-- **Offline Capable**: Cached forecasts work without internet
 - **Progressive Web App**: Installable on mobile devices with offline capabilities
-- **Netlify Edge Functions**: Secure proxy for NOAA data with rate limiting
+- **Netlify Functions**: Secure proxy for NOAA data with rate limiting
 
 ## Architecture
 
 ### Data Sources (All Free)
-- **NOAA Coastal Waters Forecasts** (CWF): Zone-specific marine forecasts
-- **Area Forecast Discussions** (AFD): Meteorologist analysis and insights
-- **Special Marine Warnings** (SMW): Emergency marine conditions
-- **Marine Weather Statements** (MWS): Updates and clarifications
-- **Tide Data**: NOAA Tides & Currents API
-- **Buoy Observations**: NDBC real-time data
+- **NOAA Marine Forecasts**: Direct text forecasts from 5 Alaska coastal regions
+- **NDBC Buoy Data**: Real-time observations from 48 Alaska stations
+- **Marine Alerts**: NOAA weather warnings and advisories
 
 ### Coverage Areas
-- **Southeast Alaska** (AJK): Juneau Weather Forecast Office zones
-- **Southcentral Alaska** (AFC): Anchorage office zones (Gulf Coast, Cook Inlet, Kodiak, Aleutians)
+- **SE Inner Coastal Waters**: 12 zones (Juneau office)
+- **SE Outside Coastal Waters**: 12 zones (offshore)
+- **Yakutat Bay**: 1 zone (specialized coverage)
+- **North Gulf Coast**: 22 zones (Kodiak, Cook Inlet, PWS)
+- **Southwest Alaska & Aleutians**: 23 zones (Bering Sea, Aleutians)
 
 ### Privacy & Security
 - **Zero Data Collection**: No user tracking, analytics, or personal data storage
@@ -118,19 +116,19 @@ Parses NOAA text forecasts into structured data:
 - Warning/advisory extraction
 
 ### Widget System (`src/js/widgets/`)
-- **LocationSelector**: Region/zone picker with dropdown interface
-- **ForecastSummary**: Parsed marine conditions with zone-specific display
-- **Discussion**: Meteorologist insights from Area Forecast Discussions
-- **Alerts**: Active warnings/advisories with real-time updates
-- **Tides**: High/low tide information for regional tide stations
-- **Observations**: Latest buoy data from NDBC stations
+- **ForecastSummary**: Region/zone selection with zone-specific forecasts
+- **Observations**: NDBC buoy station selection with real-time data
+- **Alerts**: Active warnings/advisories (future enhancement)
+- **Discussion**: Meteorologist insights (future enhancement)
+- **Tides**: Tide information (future enhancement)
 
 ### Data Flow
 1. User selects marine region, then specific zone (stored locally)
-2. App fetches NOAA data via secure Netlify proxy functions
-3. Client-side parsing and zone-specific extraction
-4. Display formatted results with caching
-5. Real-time updates every 30 minutes when active
+2. App fetches NOAA forecast via secure Netlify proxy functions
+3. Zone-specific forecast extracted and displayed
+4. User selects NDBC buoy station for current conditions
+5. Real-time buoy data fetched and parsed
+6. All data cached for offline use (30-minute TTL)
 
 ## Configuration
 
@@ -139,41 +137,30 @@ The app uses a structured zone configuration in `src/data/zones.json`:
 ```json
 {
   "regions": {
-    "southeast": {
-      "name": "Southeast Alaska",
-      "forecastFile": "FZAK51.PAJK",
+    "se_inner": {
+      "name": "SE Inner Coastal Waters",
+      "forecastUrl": "https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt",
       "office": "AJK",
       "zones": {
-        "PKZ125": "Prince William Sound",
-        "PKZ126": "Glacier Bay"
+        "PKZ011": "Glacier Bay",
+        "PKZ012": "Northern Lynn Canal"
       }
     }
   }
 }
 ```
 
-### API Endpoints
-Configure in `src/data/endpoints.json`:
-```json
-{
-  "alerts": {
-    "baseUrl": "https://api.weather.gov/alerts",
-    "format": "?area=AK&urgency=Expected,Immediate&severity=Minor,Moderate,Severe,Extreme&status=Actual"
-  },
-  "tides": {
-    "baseUrl": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
-    "format": "?begin_date={date}&end_date={date}&station={station}&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&format=json"
-  }
-}
-```
+### NDBC Buoy Stations
+Real-time data from 48 Alaska stations including:
+- **Offshore Buoys**: 46001 (Western Gulf), 46060 (West Orca Bay), 46082 (Cape Suckling)
+- **Coastal Stations**: AJXA2 (Juneau), ANTA2 (Anchorage), NMTA2 (Nome)
+- **Direct NDBC URLs**: `https://www.ndbc.noaa.gov/data/realtime2/{station}.txt`
 
 ## Security
 
 ### Content Security Policy
 Strict CSP allows only necessary domains:
-- `tgftp.nws.noaa.gov` (forecasts)
-- `tidesandcurrents.noaa.gov` (tide data)
-- `api.weather.gov` (alerts)
+- `tgftp.nws.noaa.gov` (marine forecasts)
 - `www.ndbc.noaa.gov` (buoy data)
 - `fonts.googleapis.com` (web fonts)
 
@@ -189,16 +176,15 @@ All assets self-hosted to prevent tracking and ensure reliability.
 ## Performance
 
 ### Caching Strategy
-- **Forecasts**: 30-minute cache minimum
-- **Discussions**: 3-hour cache
-- **Observations**: 10-minute cache
-- **Tides**: 24-hour cache
+- **Marine Forecasts**: 30-minute cache via Netlify functions
+- **Buoy Observations**: Direct fetch from NDBC (real-time)
+- **Zone/Station Data**: 24-hour cache in localStorage
 
 ### Optimization
-- Gzip compression
-- Minified assets
-- Conditional requests (If-Modified-Since)
-- Progressive loading
+- **Low-bandwidth design**: Minimal HTML, efficient caching
+- **Progressive loading**: Zone data loaded on demand
+- **Local development mode**: Placeholder data for offline development
+- **Responsive design**: Mobile-first for marine use
 
 ## Contributing
 
