@@ -128,7 +128,7 @@ class Observations {
                 // Local development - show placeholder
                 this.showLocalDevPlaceholder(stationId);
             } else {
-                // Production - fetch real data
+                // Production - fetch real data via Netlify function
                 const data = await this.fetchStationData(stationId);
                 this.currentData = data;
                 this.render();
@@ -147,84 +147,41 @@ class Observations {
     }
 
     /**
-     * Fetch station data from NDBC
+     * Fetch station data from NDBC via Netlify function
      * @param {string} stationId - Station ID
      * @returns {Promise} Station data
      */
     async fetchStationData(stationId) {
-        // NDBC real-time data URL
-        const url = `https://www.ndbc.noaa.gov/data/realtime2/${stationId}.txt`;
+        const currentHost = window.location.origin;
+        const proxyUrl = `${currentHost}/.netlify/functions/buoy-data/${stationId.toUpperCase()}`;
         
         try {
-            const response = await fetch(url);
+            console.log(`Fetching buoy data for ${stationId} from:`, proxyUrl);
+            const response = await fetch(proxyUrl);
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
             
-            const text = await response.text();
-            return this.parseNDBCData(text, stationId);
+            const data = await response.json();
+            console.log('Received buoy data:', data);
+            
+            if (data.status === 'success') {
+                return {
+                    stationId: data.stationId,
+                    stationName: this.stations[data.stationId] || data.stationId,
+                    timestamp: new Date(data.timestamp),
+                    data: data.data
+                };
+            } else {
+                throw new Error('Invalid response format');
+            }
         } catch (error) {
-            console.error('NDBC fetch error:', error);
+            console.error('Buoy data fetch error:', error);
             throw new Error('Unable to fetch station data');
         }
     }
 
-    /**
-     * Parse NDBC data format
-     * @param {string} text - Raw NDBC data
-     * @param {string} stationId - Station ID
-     * @returns {Object} Parsed data
-     */
-    parseNDBCData(text, stationId) {
-        const lines = text.split('\n').filter(line => line.trim());
-        
-        if (lines.length < 3) {
-            throw new Error('Invalid NDBC data format');
-        }
-        
-        const headerLine = lines[0];
-        const unitLine = lines[1];
-        const dataLine = lines[2]; // Most recent data
-        
-        const headers = headerLine.split(/\s+/);
-        const units = unitLine.split(/\s+/);
-        const values = dataLine.split(/\s+/);
-        
-        // Create data object
-        const data = {};
-        headers.forEach((header, index) => {
-            data[header] = {
-                value: values[index] || 'N/A',
-                unit: units[index] || ''
-            };
-        });
-        
-        return {
-            stationId,
-            stationName: this.stations[stationId] || stationId,
-            timestamp: this.parseTimestamp(data),
-            data: data
-        };
-    }
-
-    /**
-     * Parse timestamp from NDBC data
-     * @param {Object} data - Parsed data object
-     * @returns {Date} Timestamp
-     */
-    parseTimestamp(data) {
-        try {
-            const year = parseInt(data.YY?.value || data.YYYY?.value) || new Date().getFullYear();
-            const month = parseInt(data.MM?.value) || 1;
-            const day = parseInt(data.DD?.value) || 1;
-            const hour = parseInt(data.hh?.value) || 0;
-            const minute = parseInt(data.mm?.value) || 0;
-            
-            return new Date(year, month - 1, day, hour, minute);
-        } catch (error) {
-            return new Date();
-        }
-    }
 
     /**
      * Show local development placeholder
