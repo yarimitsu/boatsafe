@@ -104,6 +104,25 @@
     color: var(--text-secondary);
 }
 
+.forecast-link {
+    margin-top: var(--spacing-2);
+}
+
+.forecast-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.forecast-link a:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 10px var(--ice-glow);
+}
+
 .forecast-periods {
     display: flex;
     flex-direction: column;

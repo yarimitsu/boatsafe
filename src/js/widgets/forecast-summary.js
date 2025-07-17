@@ -51,6 +51,11 @@ class ForecastSummary {
             <div class="forecast-header">
                 <div class="forecast-location">${stationName}</div>
                 <div class="forecast-updated">${issueTime}</div>
+                <div class="forecast-link">
+                    <a href="https://www.ndbc.noaa.gov/data/Forecasts/FZAK51.PAJK.html" target="_blank" rel="noopener">
+                        View All Alaska Marine Forecasts →
+                    </a>
+                </div>
             </div>
             <div class="forecast-periods">
                 ${periods.map(period => this.renderPeriod(period)).join('')}
