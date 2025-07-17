@@ -87,11 +87,11 @@ class BightWatchApp {
      */
     loadPreferences() {
         try {
-            const savedZone = localStorage.getItem('bightwatch_selected_zone');
-            if (savedZone && this.zones[savedZone]) {
-                this.currentZone = savedZone;
-                this.widgets.locationSelector.setSelected(savedZone);
-                this.loadForecastData(savedZone);
+            const savedRegion = localStorage.getItem('bightwatch_selected_region');
+            if (savedRegion && this.zones.regions && this.zones.regions[savedRegion]) {
+                this.currentRegion = savedRegion;
+                this.widgets.locationSelector.setSelected(savedRegion);
+                this.loadRegionForecastData(savedRegion);
             }
         } catch (error) {
             console.warn('Failed to load preferences:', error);
@@ -607,8 +607,8 @@ class BightWatchApp {
         
         // Update every 30 minutes
         this.updateInterval = setInterval(() => {
-            if (this.currentZone && !document.hidden) {
-                this.loadForecastData(this.currentZone);
+            if (this.currentRegion && !document.hidden) {
+                this.loadRegionForecastData(this.currentRegion);
             }
         }, 30 * 60 * 1000);
     }
@@ -661,8 +661,8 @@ class BightWatchApp {
      */
     getStats() {
         return {
-            currentZone: this.currentZone,
-            totalZones: Object.keys(this.zones || {}).length,
+            currentRegion: this.currentRegion,
+            totalRegions: Object.keys(this.zones?.regions || {}).length,
             cache: window.BightWatch.cache.getStats(),
             lastUpdate: new Date().toISOString()
         };
