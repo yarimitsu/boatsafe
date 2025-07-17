@@ -75,7 +75,8 @@ class BoatSafeApp {
             discussion: new Discussion(),
             alerts: new Alerts(),
             tides: new Tides(),
-            observations: new Observations()
+            observations: new Observations(),
+            weather: new WeatherWidget()
         };
         
         console.log('UI components initialized');
@@ -177,9 +178,9 @@ class BoatSafeApp {
                     console.warn('Discussion loading failed:', err);
                     return { error: 'Discussion not available', type: 'discussion' };
                 }),
-                this.loadAlerts().catch(err => {
-                    console.warn('Alerts loading failed:', err);
-                    return { features: [], error: 'Alerts not available', type: 'alerts' };
+                this.loadMarineAlerts().catch(err => {
+                    console.warn('Marine alerts loading failed:', err);
+                    return { alerts: [], error: 'Marine alerts not available', type: 'alerts' };
                 }),
                 this.loadTides(regionId).catch(err => {
                     console.warn('Tides loading failed:', err);
@@ -195,7 +196,7 @@ class BoatSafeApp {
 
             // Update widgets with results
             results.forEach((result, index) => {
-                const widgetNames = ['Discussion', 'Alerts', 'Tides', 'Observations'];
+                const widgetNames = ['Discussion', 'Marine Alerts', 'Tides', 'Observations'];
                 console.log(`Widget ${index} (${widgetNames[index]}): status=${result.status}, value=`, result.value);
                 
                 if (result.status === 'fulfilled' && result.value && !result.value.error) {
@@ -204,9 +205,9 @@ class BoatSafeApp {
                             this.widgets.discussion.update(result.value);
                             console.log('Updated discussion widget');
                             break;
-                        case 1: // Alerts
+                        case 1: // Marine Alerts
                             this.widgets.alerts.update(result.value);
-                            console.log('Updated alerts widget');
+                            console.log('Updated marine alerts widget');
                             break;
                         case 2: // Tides
                             this.widgets.tides.update(result.value);
@@ -226,7 +227,7 @@ class BoatSafeApp {
                         case 0: // Discussion
                             this.widgets.discussion.showError('Discussion not available - using cached forecast data');
                             break;
-                        case 1: // Alerts
+                        case 1: // Marine Alerts
                             this.widgets.alerts.showNoAlerts();
                             break;
                         case 2: // Tides
@@ -438,50 +439,23 @@ class BoatSafeApp {
         return 'Very rough';
     }
 
-    /**
-     * Load area forecast discussion
-     * @param {string} office - Forecast office
-     * @returns {Promise} Discussion data
-     */
-    async loadDiscussion(office) {
-        const endpoint = this.endpoints.discussion;
-        const url = endpoint.baseUrl + endpoint.format.replace('{office}', office.toUpperCase());
-
-        try {
-            const data = await window.BoatSafe.http.get(url, { cacheTTL: 180 });
-            
-            // Get the most recent discussion
-            const latestProduct = data.features && data.features.length > 0 ? data.features[0] : null;
-            
-            if (latestProduct) {
-                return {
-                    office,
-                    text: latestProduct.properties.productText,
-                    issued: new Date(latestProduct.properties.issuanceTime)
-                };
-            } else {
-                throw new Error('No AFD products found');
-            }
-        } catch (error) {
-            console.error('Failed to load discussion:', error);
-            throw new Error('Forecast discussion not available');
-        }
-    }
 
     /**
-     * Load marine alerts
-     * @returns {Promise} Alerts data
+     * Load marine alerts from custom proxy
+     * @returns {Promise} Marine alerts data
      */
-    async loadAlerts() {
-        const endpoint = this.endpoints.alerts;
-        const url = endpoint.baseUrl + endpoint.format;
+    async loadMarineAlerts() {
+        const currentHost = window.location.origin;
+        const proxyUrl = `${currentHost}/.netlify/functions/marine-alerts`;
 
         try {
-            const data = await window.BoatSafe.http.get(url, { cacheTTL: 10 });
+            console.log('Fetching marine alerts via proxy:', proxyUrl);
+            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 5 });
+            console.log('Marine alerts proxy request succeeded:', data);
             return data;
         } catch (error) {
-            console.error('Failed to load alerts:', error);
-            return { features: [] };
+            console.error('Marine alerts proxy request failed:', error);
+            return { alerts: [], sources: [], error: 'Marine alerts not available' };
         }
     }
 

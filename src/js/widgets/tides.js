@@ -9,6 +9,8 @@ class Tides {
         this.dataContainer = this.container.querySelector('.tide-data-container');
         this.currentData = null;
         this.tideStations = null;
+        this.currentDate = new Date();
+        this.currentStationId = null;
         
         this.init();
     }
@@ -20,6 +22,7 @@ class Tides {
         await this.loadTideStations();
         this.populateDropdown();
         this.setupEventListeners();
+        this.renderDateNavigation();
     }
 
     /**
@@ -59,33 +62,43 @@ class Tides {
         if (this.dropdown) {
             this.dropdown.addEventListener('change', (e) => {
                 const stationId = e.target.value;
+                this.currentStationId = stationId;
                 if (stationId) {
-                    this.loadTideData(stationId);
+                    this.loadTideData(stationId, this.currentDate);
                 } else {
                     this.showDefault();
                 }
             });
         }
+        
+        // Use event delegation for date navigation buttons
+        this.container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('prev-day')) {
+                this.navigateDate(-1);
+            } else if (e.target.classList.contains('next-day')) {
+                this.navigateDate(1);
+            }
+        });
     }
 
     /**
      * Load tide data for selected station
      */
-    async loadTideData(stationId) {
+    async loadTideData(stationId, date = new Date()) {
         if (!this.tideStations[stationId]) return;
 
         this.showLoading();
         
         try {
-            const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
-            const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?begin_date=${today}&end_date=${today}&station=${stationId}&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&format=json`;
+            const dateStr = this.formatDateForAPI(date);
+            const url = `/.netlify/functions/tide-data/${stationId}?date=${dateStr}`;
             
-            const data = await window.BightWatch.http.get(url, { cacheTTL: 1440 });
-            this.currentData = data;
-            this.render(stationId);
+            const response = await window.BightWatch.http.get(url, { cacheTTL: 30 });
+            this.currentData = response.data;
+            this.render(stationId, date);
         } catch (error) {
             console.error('Failed to load tide data:', error);
-            this.showError('Tide data not available');
+            this.showError('Tide data not available. Please try again later.');
         }
     }
 
@@ -108,7 +121,7 @@ class Tides {
     /**
      * Render the tides
      */
-    render(stationId = null) {
+    render(stationId = null, date = new Date()) {
         if (!this.currentData || !this.currentData.predictions) {
             this.showError('No tide data available');
             return;
@@ -117,15 +130,19 @@ class Tides {
         const tideEvents = this.processTideData(this.currentData.predictions);
         
         if (tideEvents.length === 0) {
-            this.showError('No tide events found');
+            this.showError('No tide events found for this date');
             return;
         }
 
         const stationName = stationId ? this.tideStations[stationId].name : 'Unknown Station';
+        const dateStr = this.formatDateDisplay(date);
 
         const html = `
             <div class="tide-station">
-                <div class="tide-station-name">${stationName}</div>
+                <div class="tide-station-header">
+                    <div class="tide-station-name">${stationName}</div>
+                    <div class="tide-date">${dateStr}</div>
+                </div>
                 <div class="tide-events">
                     ${tideEvents.map(event => this.renderTideEvent(event)).join('')}
                 </div>
@@ -144,38 +161,24 @@ class Tides {
         if (!predictions || predictions.length === 0) return [];
         
         const events = [];
-        const now = new Date();
-        const nextDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         
-        // This is a simplified approach - in production, you'd need more sophisticated tide analysis
-        predictions.forEach((prediction, index) => {
+        // NOAA API with 'hilo' interval returns actual high/low predictions
+        predictions.forEach((prediction) => {
             const time = new Date(prediction.t);
             const height = parseFloat(prediction.v);
+            const type = prediction.type === 'H' ? 'high' : 'low';
             
-            if (time >= now && time <= nextDay) {
-                // Determine if high or low tide by comparing with neighbors
-                const prev = predictions[index - 1];
-                const next = predictions[index + 1];
-                
-                if (prev && next) {
-                    const prevHeight = parseFloat(prev.v);
-                    const nextHeight = parseFloat(next.v);
-                    
-                    const isHigh = height > prevHeight && height > nextHeight;
-                    const isLow = height < prevHeight && height < nextHeight;
-                    
-                    if (isHigh || isLow) {
-                        events.push({
-                            time,
-                            height,
-                            type: isHigh ? 'high' : 'low'
-                        });
-                    }
-                }
-            }
+            events.push({
+                time,
+                height,
+                type
+            });
         });
         
-        return events.slice(0, 8); // Limit to next 8 events
+        // Sort by time
+        events.sort((a, b) => a.time - b.time);
+        
+        return events;
     }
 
     /**
@@ -185,12 +188,14 @@ class Tides {
      */
     renderTideEvent(event) {
         const { time, height, type } = event;
+        const typeDisplay = type === 'high' ? 'High' : 'Low';
+        const heightDisplay = height >= 0 ? `${height.toFixed(1)} ft` : `${height.toFixed(1)} ft`;
         
         return `
             <div class="tide-event ${type}">
-                <div class="tide-type">${type} tide</div>
+                <div class="tide-type">${typeDisplay} Tide</div>
                 <div class="tide-time">${this.formatTime(time)}</div>
-                <div class="tide-height">${height.toFixed(1)} ft</div>
+                <div class="tide-height">${heightDisplay}</div>
             </div>
         `;
     }
@@ -220,6 +225,79 @@ class Tides {
             });
         } catch (error) {
             return 'Unknown';
+        }
+    }
+
+    /**
+     * Format date for API calls (YYYYMMDD)
+     * @param {Date} date - Date object
+     * @returns {string} Formatted date string
+     */
+    formatDateForAPI(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    }
+
+    /**
+     * Format date for display
+     * @param {Date} date - Date object
+     * @returns {string} Formatted date string
+     */
+    formatDateDisplay(date) {
+        return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    /**
+     * Navigate to previous or next day
+     * @param {number} direction - -1 for previous, 1 for next
+     */
+    navigateDate(direction) {
+        const newDate = new Date(this.currentDate);
+        newDate.setDate(newDate.getDate() + direction);
+        this.currentDate = newDate;
+        
+        this.updateDateNavigation();
+        
+        if (this.currentStationId) {
+            this.loadTideData(this.currentStationId, this.currentDate);
+        }
+    }
+
+    /**
+     * Render date navigation controls
+     */
+    renderDateNavigation() {
+        const navigationHtml = `
+            <div class="tide-date-navigation">
+                <button class="prev-day" title="Previous day">◀</button>
+                <span class="current-date">${this.formatDateDisplay(this.currentDate)}</span>
+                <button class="next-day" title="Next day">▶</button>
+            </div>
+        `;
+        
+        // Insert navigation above the data container
+        const existingNav = this.container.querySelector('.tide-date-navigation');
+        if (existingNav) {
+            existingNav.remove();
+        }
+        
+        this.dataContainer.insertAdjacentHTML('beforebegin', navigationHtml);
+    }
+
+    /**
+     * Update date navigation display
+     */
+    updateDateNavigation() {
+        const currentDateSpan = this.container.querySelector('.current-date');
+        if (currentDateSpan) {
+            currentDateSpan.textContent = this.formatDateDisplay(this.currentDate);
         }
     }
 

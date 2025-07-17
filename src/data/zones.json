@@ -107,5 +107,27 @@
         "PKZ782": "Seguam to Adak Pacific Side out to 15 NM"
       }
     }
+  },
+  "weather_zones": {
+    "name": "Alaska Weather Zones",
+    "office": "ARH",
+    "zones": {
+      "AKZ317": "Chugach Mountains",
+      "AKZ318": "Copper River Basin",
+      "AKZ319": "Prince William Sound",
+      "AKZ320": "Kenai Peninsula",
+      "AKZ321": "Anchorage",
+      "AKZ322": "Matanuska Valley",
+      "AKZ323": "Susitna Valley",
+      "AKZ324": "Western Prince William Sound",
+      "AKZ325": "Kodiak Island",
+      "AKZ326": "Bristol Bay",
+      "AKZ327": "Aleutian Islands",
+      "AKZ328": "Pribilof Islands",
+      "AKZ329": "St. Lawrence Island",
+      "AKZ330": "Northwest Arctic",
+      "AKZ331": "North Slope",
+      "AKZ332": "Arctic Ocean"
+    }
   }
 }

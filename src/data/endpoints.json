@@ -20,9 +20,9 @@
     "description": "Weather Station Observations"
   },
   "discussion": {
-    "baseUrl": "https://api.weather.gov/products/types/AFD/locations",
+    "baseUrl": "/.netlify/functions/forecast-discussion",
     "format": "/{office}",
-    "description": "Area Forecast Discussion"
+    "description": "Area Forecast Discussion (Proxied)"
   },
   "gridpoint": {
     "baseUrl": "https://api.weather.gov/gridpoints",

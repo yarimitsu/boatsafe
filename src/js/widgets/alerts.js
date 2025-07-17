@@ -19,7 +19,7 @@ class Alerts {
 
     /**
      * Update widget with alerts data
-     * @param {Object} data - Alerts data
+     * @param {Object} data - Marine alerts data
      */
     update(data) {
         this.currentData = data;
@@ -30,52 +30,53 @@ class Alerts {
      * Render the alerts
      */
     render() {
-        if (!this.currentData || !this.currentData.features || this.currentData.features.length === 0) {
+        if (!this.currentData || !this.currentData.alerts || this.currentData.alerts.length === 0) {
             this.showNoAlerts();
             return;
         }
 
-        const marineAlerts = this.currentData.features.filter(alert => 
-            this.isMarineAlert(alert.properties)
-        );
-
-        if (marineAlerts.length === 0) {
-            this.showNoAlerts();
-            return;
-        }
-
-        const html = marineAlerts.map(alert => this.renderAlert(alert.properties)).join('');
-        this.content.innerHTML = html;
+        const alerts = this.currentData.alerts;
+        const html = alerts.map(alert => this.renderAlert(alert)).join('');
+        
+        // Add source information at the bottom
+        const sourceInfo = this.renderSourceInfo(this.currentData.sources);
+        this.content.innerHTML = html + sourceInfo;
     }
 
     /**
-     * Check if alert is marine-related
+     * Check if alert is marine-related (legacy function, now all alerts are marine)
      * @param {Object} properties - Alert properties
      * @returns {boolean} Whether alert is marine-related
      */
     isMarineAlert(properties) {
-        const marineKeywords = ['marine', 'coastal', 'wind', 'wave', 'surf', 'tide', 'storm'];
-        const text = (properties.headline + ' ' + properties.event).toLowerCase();
-        
-        return marineKeywords.some(keyword => text.includes(keyword));
+        // All alerts from marine-alerts function are marine-related
+        return true;
     }
 
     /**
      * Render individual alert
-     * @param {Object} properties - Alert properties
+     * @param {Object} alert - Marine alert object
      * @returns {string} HTML string
      */
-    renderAlert(properties) {
-        const { headline, event, severity, urgency, onset, expires, description } = properties;
+    renderAlert(alert) {
+        const { headline, type, severity, areas, description, issued, expires, source } = alert;
         
         return `
             <div class="alert-item ${this.getAlertClass(severity)}">
                 <div class="alert-header">
-                    <div class="alert-title">${headline || event}</div>
+                    <div class="alert-title">${headline || type}</div>
                     <div class="alert-severity">${severity}</div>
                 </div>
+                <div class="alert-source">
+                    <small>Source: ${source}</small>
+                </div>
+                ${areas && areas.length > 0 ? `
+                <div class="alert-areas">
+                    <strong>Areas:</strong> ${areas.join(', ')}
+                </div>
+                ` : ''}
                 <div class="alert-time">
-                    ${this.formatAlertTime(onset, expires)}
+                    ${this.formatMarineAlertTime(issued, expires)}
                 </div>
                 <div class="alert-description">
                     ${this.formatDescription(description)}
@@ -105,7 +106,28 @@ class Alerts {
     }
 
     /**
-     * Format alert time information
+     * Format marine alert time information
+     * @param {string} issued - Issued time text
+     * @param {string} expires - Expiration time text
+     * @returns {string} Formatted time string
+     */
+    formatMarineAlertTime(issued, expires) {
+        let timeStr = '';
+        
+        if (issued) {
+            timeStr += `Issued: ${issued}`;
+        }
+        
+        if (expires) {
+            if (timeStr) timeStr += ' • ';
+            timeStr += `${expires}`;
+        }
+        
+        return timeStr || 'Time not specified';
+    }
+
+    /**
+     * Format alert time information (legacy function)
      * @param {string} onset - Onset time
      * @param {string} expires - Expiration time
      * @returns {string} Formatted time string
@@ -140,12 +162,15 @@ class Alerts {
     formatDescription(description) {
         if (!description) return '';
         
-        // Truncate long descriptions
-        if (description.length > 300) {
-            return description.substring(0, 300) + '...';
+        // Convert line breaks to HTML breaks
+        let formatted = description.replace(/\n/g, '<br>');
+        
+        // Truncate very long descriptions
+        if (formatted.length > 600) {
+            formatted = formatted.substring(0, 600) + '...';
         }
         
-        return description;
+        return formatted;
     }
 
     /**
@@ -203,15 +228,38 @@ class Alerts {
     }
 
     /**
+     * Render source information
+     * @param {Array} sources - Array of source information
+     * @returns {string} HTML string for source info
+     */
+    renderSourceInfo(sources) {
+        if (!sources || sources.length === 0) return '';
+        
+        return `
+            <div class="alert-sources">
+                <div class="source-title">Data Sources:</div>
+                ${sources.map(source => `
+                    <div class="source-item ${source.status}">
+                        <span class="source-name">${source.name}</span>
+                        <span class="source-status">${source.status}</span>
+                        ${source.error ? `<span class="source-error">${source.error}</span>` : ''}
+                    </div>
+                `).join('')}
+                <div class="source-updated">
+                    <small>Last updated: ${this.formatDate(new Date())}</small>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * Get active alerts count
      * @returns {number} Number of active alerts
      */
     getActiveCount() {
-        if (!this.currentData || !this.currentData.features) return 0;
+        if (!this.currentData || !this.currentData.alerts) return 0;
         
-        return this.currentData.features.filter(alert => 
-            this.isMarineAlert(alert.properties)
-        ).length;
+        return this.currentData.alerts.length;
     }
 }
 

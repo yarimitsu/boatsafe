@@ -23,6 +23,30 @@
     "lat": 57.0517,
     "lon": -135.3417
   },
+  "9450460": {
+    "name": "Wrangell, AK",
+    "region": "Southeast Alaska",
+    "lat": 56.4708,
+    "lon": -132.3769
+  },
+  "9450551": {
+    "name": "Haines, AK",
+    "region": "Southeast Alaska",
+    "lat": 59.2342,
+    "lon": -135.4486
+  },
+  "9450589": {
+    "name": "Metlakatla, AK",
+    "region": "Southeast Alaska",
+    "lat": 55.1297,
+    "lon": -131.5742
+  },
+  "9450576": {
+    "name": "Eldred Rock, AK",
+    "region": "Southeast Alaska",
+    "lat": 58.9653,
+    "lon": -135.2239
+  },
   "9455920": {
     "name": "Anchorage, AK",
     "region": "Southcentral Alaska",
@@ -64,5 +88,89 @@
     "region": "Southcentral Alaska",
     "lat": 59.6433,
     "lon": -151.4183
+  },
+  "9459881": {
+    "name": "Seldovia, AK",
+    "region": "Southcentral Alaska",
+    "lat": 59.4369,
+    "lon": -151.7186
+  },
+  "9455090": {
+    "name": "Whittier, AK",
+    "region": "Southcentral Alaska",
+    "lat": 60.7739,
+    "lon": -148.6869
+  },
+  "9455030": {
+    "name": "Esperanza, AK",
+    "region": "Southcentral Alaska",
+    "lat": 60.7706,
+    "lon": -147.9161
+  },
+  "9465673": {
+    "name": "Bethel, AK",
+    "region": "Western Alaska",
+    "lat": 60.7922,
+    "lon": -161.7558
+  },
+  "9464212": {
+    "name": "Nome, AK",
+    "region": "Western Alaska",
+    "lat": 64.4958,
+    "lon": -165.4400
+  },
+  "9462450": {
+    "name": "Unalaska, AK",
+    "region": "Western Alaska",
+    "lat": 53.8800,
+    "lon": -166.5369
+  },
+  "9461380": {
+    "name": "Adak, AK",
+    "region": "Western Alaska",
+    "lat": 51.8639,
+    "lon": -176.6319
+  },
+  "9461710": {
+    "name": "Nikolski, AK",
+    "region": "Western Alaska",
+    "lat": 52.9428,
+    "lon": -168.8658
+  },
+  "9459123": {
+    "name": "King Cove, AK",
+    "region": "Western Alaska",
+    "lat": 55.0600,
+    "lon": -162.3086
+  },
+  "9497645": {
+    "name": "Prudhoe Bay, AK",
+    "region": "Arctic Alaska",
+    "lat": 70.4008,
+    "lon": -148.5519
+  },
+  "9491094": {
+    "name": "Red Dog Dock, AK",
+    "region": "Arctic Alaska",
+    "lat": 68.0792,
+    "lon": -162.8656
+  },
+  "9491253": {
+    "name": "Kotzebue, AK",
+    "region": "Arctic Alaska",
+    "lat": 66.8986,
+    "lon": -162.5986
+  },
+  "9468756": {
+    "name": "St. Paul Island, AK",
+    "region": "Bering Sea",
+    "lat": 57.1256,
+    "lon": -170.2808
+  },
+  "9468333": {
+    "name": "St. George Island, AK",
+    "region": "Bering Sea",
+    "lat": 56.5986,
+    "lon": -169.5469
   }
 }

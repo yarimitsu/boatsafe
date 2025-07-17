@@ -125,8 +125,15 @@ class Observations {
             const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
             
             if (isLocal) {
-                // Local development - show placeholder
-                this.showLocalDevPlaceholder(stationId);
+                // Local development - try to test with live data, fallback to placeholder
+                try {
+                    const data = await this.fetchStationDataDirect(stationId);
+                    this.currentData = data;
+                    this.render();
+                } catch (error) {
+                    console.warn('Failed to fetch live data in development, showing placeholder:', error);
+                    this.showLocalDevPlaceholder(stationId);
+                }
             } else {
                 // Production - fetch real data via Netlify function
                 const data = await this.fetchStationData(stationId);
@@ -143,6 +150,101 @@ class Observations {
         } catch (error) {
             console.error('Failed to load station observations:', error);
             this.showError(`Failed to load observations for ${stationId}`);
+        }
+    }
+
+    /**
+     * Fetch station data directly from NDBC (for development testing)
+     * @param {string} stationId - Station ID
+     * @returns {Promise} Station data
+     */
+    async fetchStationDataDirect(stationId) {
+        const url = `https://www.ndbc.noaa.gov/data/realtime2/${stationId}.txt`;
+        
+        try {
+            console.log(`Fetching buoy data directly from: ${url}`);
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const text = await response.text();
+            console.log(`Got buoy data (${text.length} chars)`);
+            
+            // Parse and return structured data
+            const data = this.parseNDBCData(text, stationId);
+            
+            return {
+                stationId: data.stationId,
+                stationName: this.stations[data.stationId] || data.stationId,
+                timestamp: new Date(data.timestamp),
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Direct buoy data fetch error:', error);
+            throw new Error('Unable to fetch station data directly from NDBC');
+        }
+    }
+
+    /**
+     * Parse NDBC data text into structured format
+     * @param {string} text - Raw NDBC data text
+     * @param {string} stationId - Station ID
+     * @returns {Object} Parsed data
+     */
+    parseNDBCData(text, stationId) {
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 3) {
+            throw new Error('Invalid NDBC data format');
+        }
+        
+        const headerLine = lines[0];
+        const unitLine = lines[1];
+        const dataLine = lines[2]; // Most recent data
+        
+        const headers = headerLine.split(/\s+/);
+        const units = unitLine.split(/\s+/);
+        const values = dataLine.split(/\s+/);
+        
+        // Create data object
+        const data = {};
+        headers.forEach((header, index) => {
+            data[header] = {
+                value: values[index] || 'MM',
+                unit: units[index] || ''
+            };
+        });
+        
+        // Parse timestamp
+        const timestamp = this.parseTimestamp(data);
+        
+        return {
+            stationId,
+            timestamp: timestamp.toISOString(),
+            data: data,
+            parsed: timestamp,
+            status: 'success'
+        };
+    }
+
+    /**
+     * Parse timestamp from NDBC data
+     * @param {Object} data - NDBC data object
+     * @returns {Date} Parsed timestamp
+     */
+    parseTimestamp(data) {
+        try {
+            const year = parseInt(data.YY?.value || data.YYYY?.value) || new Date().getFullYear();
+            const month = parseInt(data.MM?.value) || 1;
+            const day = parseInt(data.DD?.value) || 1;
+            const hour = parseInt(data.hh?.value) || 0;
+            const minute = parseInt(data.mm?.value) || 0;
+            
+            return new Date(year, month - 1, day, hour, minute);
+        } catch (error) {
+            return new Date();
         }
     }
 
