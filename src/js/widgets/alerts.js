@@ -82,11 +82,22 @@ class Alerts {
         }
 
         const alerts = this.currentData.alerts;
-        const html = alerts.map(alert => this.renderAlert(alert)).join('');
+        const alertsHtml = alerts.map(alert => this.renderAlert(alert)).join('');
         
-        // Add source information at the bottom
-        const sourceInfo = this.renderSourceInfo(this.currentData.sources);
-        this.content.innerHTML = html + sourceInfo;
+        // Add header with update time in upper right
+        const headerHtml = `
+            <div class="alerts-header">
+                <div class="alerts-title">
+                    <strong>Marine Alerts</strong>
+                    <span class="alert-count">${alerts.length} active</span>
+                </div>
+                <div class="alerts-updated">
+                    <span class="period-time">Updated: ${this.formatDate(new Date(this.currentData.timestamp))}</span>
+                </div>
+            </div>
+        `;
+        
+        this.content.innerHTML = headerHtml + alertsHtml;
     }
 
     /**
@@ -108,12 +119,17 @@ class Alerts {
         const { type, severity, text, effectiveTime, expirationTime, source } = alert;
         
         return `
-            <div class="forecast-period">
+            <div class="forecast-period alert-${severity}">
                 <div class="period-header">
-                    <strong>${type}</strong>
-                    <span class="period-time">${source}</span>
+                    <div class="alert-title-section">
+                        <strong>${type}</strong>
+                        <span class="alert-source">${source}</span>
+                    </div>
+                    <div class="alert-severity-badge">
+                        <span class="severity-${severity}">${severity.toUpperCase()}</span>
+                    </div>
                 </div>
-                <div class="forecast-text">
+                <div class="forecast-text alert-text">
                     ${this.formatAlertText(text)}
                 </div>
                 ${effectiveTime || expirationTime ? `
@@ -254,7 +270,18 @@ class Alerts {
      * Show no alerts state
      */
     showNoAlerts() {
-        this.content.innerHTML = '<div class="no-alerts">No active marine alerts</div>';
+        const headerHtml = `
+            <div class="alerts-header">
+                <div class="alerts-title">
+                    <strong>Marine Alerts</strong>
+                </div>
+                <div class="alerts-updated">
+                    <span class="period-time">Updated: ${this.formatDate(new Date())}</span>
+                </div>
+            </div>
+        `;
+        
+        this.content.innerHTML = headerHtml + '<div class="no-alerts">No active marine alerts</div>';
     }
 
     /**

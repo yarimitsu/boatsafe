@@ -9,24 +9,24 @@ const VALID_ZONES = new Set([
   'AKZ325', 'AKZ326', 'AKZ327', 'AKZ328', 'AKZ329', 'AKZ330', 'AKZ331', 'AKZ332'
 ]);
 
-// Zone name mapping
+// Zone name mapping (Southeast Alaska)
 const ZONE_NAMES = {
-  'AKZ317': 'Chugach Mountains',
-  'AKZ318': 'Copper River Basin',
-  'AKZ319': 'Prince William Sound',
-  'AKZ320': 'Kenai Peninsula',
-  'AKZ321': 'Anchorage',
-  'AKZ322': 'Matanuska Valley',
-  'AKZ323': 'Susitna Valley',
-  'AKZ324': 'Western Prince William Sound',
-  'AKZ325': 'Kodiak Island',
-  'AKZ326': 'Bristol Bay',
-  'AKZ327': 'Aleutian Islands',
-  'AKZ328': 'Pribilof Islands',
-  'AKZ329': 'St. Lawrence Island',
-  'AKZ330': 'Northwest Arctic',
-  'AKZ331': 'North Slope',
-  'AKZ332': 'Arctic Ocean'
+  'AKZ317': 'City and Borough of Yakutat',
+  'AKZ318': 'Municipality of Skagway',
+  'AKZ319': 'Haines Borough and Klukwan',
+  'AKZ320': 'Glacier Bay',
+  'AKZ321': 'Eastern Chichagof Island',
+  'AKZ322': 'Cape Fairweather to Lisianski Strait',
+  'AKZ323': 'City and Borough of Sitka',
+  'AKZ324': 'Admiralty Island',
+  'AKZ325': 'City and Borough of Juneau',
+  'AKZ326': 'Petersburg Borough',
+  'AKZ327': 'Western Kupreanof and Kuiu Island',
+  'AKZ328': 'Prince of Wales Island',
+  'AKZ329': 'City and Borough of Wrangell',
+  'AKZ330': 'Ketchikan Gateway Borough',
+  'AKZ331': 'City of Hyder',
+  'AKZ332': 'Annette Island'
 };
 
 // Rate limiting store (in-memory)

@@ -11,24 +11,24 @@ class WeatherWidget {
         this.currentData = null;
         this.selectedZone = null;
         
-        // Alaska weather zones mapping
+        // Alaska weather zones mapping (Southeast Alaska)
         this.zones = {
-            'AKZ317': 'Chugach Mountains',
-            'AKZ318': 'Copper River Basin',
-            'AKZ319': 'Prince William Sound',
-            'AKZ320': 'Kenai Peninsula',
-            'AKZ321': 'Anchorage',
-            'AKZ322': 'Matanuska Valley',
-            'AKZ323': 'Susitna Valley',
-            'AKZ324': 'Western Prince William Sound',
-            'AKZ325': 'Kodiak Island',
-            'AKZ326': 'Bristol Bay',
-            'AKZ327': 'Aleutian Islands',
-            'AKZ328': 'Pribilof Islands',
-            'AKZ329': 'St. Lawrence Island',
-            'AKZ330': 'Northwest Arctic',
-            'AKZ331': 'North Slope',
-            'AKZ332': 'Arctic Ocean'
+            'AKZ317': 'City and Borough of Yakutat',
+            'AKZ318': 'Municipality of Skagway',
+            'AKZ319': 'Haines Borough and Klukwan',
+            'AKZ320': 'Glacier Bay',
+            'AKZ321': 'Eastern Chichagof Island',
+            'AKZ322': 'Cape Fairweather to Lisianski Strait',
+            'AKZ323': 'City and Borough of Sitka',
+            'AKZ324': 'Admiralty Island',
+            'AKZ325': 'City and Borough of Juneau',
+            'AKZ326': 'Petersburg Borough',
+            'AKZ327': 'Western Kupreanof and Kuiu Island',
+            'AKZ328': 'Prince of Wales Island',
+            'AKZ329': 'City and Borough of Wrangell',
+            'AKZ330': 'Ketchikan Gateway Borough',
+            'AKZ331': 'City of Hyder',
+            'AKZ332': 'Annette Island'
         };
         
         this.init();
@@ -183,8 +183,13 @@ class WeatherWidget {
         const html = `
             <div class="forecast-period">
                 <div class="period-header">
-                    <strong>${zone} - ${displayName}</strong>
-                    <span class="period-time">Updated: ${this.formatDate(new Date(updated))}</span>
+                    <div class="forecast-title">
+                        <strong>${displayName}</strong>
+                        <span class="zone-id">${zone}</span>
+                    </div>
+                    <div class="forecast-time">
+                        <span class="period-time">Updated: ${this.formatDate(new Date(updated))}</span>
+                    </div>
                 </div>
                 <div class="forecast-text">
                     ${cleanForecast}
@@ -226,7 +231,7 @@ class WeatherWidget {
     }
 
     /**
-     * Format date for display
+     * Format date for display (matches discussion widget style)
      * @param {Date} date - Date object
      * @returns {string} Formatted date string
      */
@@ -234,16 +239,12 @@ class WeatherWidget {
         if (!date) return 'Unknown';
         
         try {
-            const now = new Date();
-            const diffMinutes = Math.floor((now - date) / (1000 * 60));
-            
-            if (diffMinutes < 60) {
-                return `${diffMinutes} minutes ago`;
-            } else if (diffMinutes < 1440) {
-                return `${Math.floor(diffMinutes / 60)} hours ago`;
-            } else {
-                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            }
+            return new Date(date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         } catch (error) {
             return 'Unknown';
         }

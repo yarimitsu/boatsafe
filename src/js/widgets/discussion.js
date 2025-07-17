@@ -123,6 +123,8 @@ class Discussion {
             .replace(/usa\.gov[^\n]*/gi, '')
             // Remove bullet points that often appear after usa.gov references
             .replace(/^\s*[•·\-\*]\s*[^\n]*$/gm, '')
+            // Remove any remaining bullet-like patterns
+            .replace(/\s*[•·▪▫]\s*/g, ' ')
             // Remove excessive whitespace and normalize line breaks
             .replace(/\s+/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')

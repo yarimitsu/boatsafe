@@ -87,9 +87,12 @@
         gap: var(--spacing-1);
     }
     
-    .forecast-text {
+    .forecast-text, .period-text {
         font-size: var(--font-size-sm);
         line-height: 1.4;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
     }
 }
 
@@ -254,6 +257,195 @@
 .period-time {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
+}
+
+/* Weather Forecast Widget Specific Styles */
+.weather-content .forecast-period .period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-3);
+}
+
+.weather-content .forecast-title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+}
+
+.weather-content .zone-id {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.weather-content .forecast-time {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.weather-content .forecast-text {
+    background: rgba(255, 255, 255, 0.05);
+    padding: var(--spacing-3);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--accent-teal);
+    white-space: pre-line;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-3);
+}
+
+.weather-content .weather-link {
+    text-align: right;
+}
+
+.weather-content .weather-link a {
+    color: var(--accent-teal);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.weather-content .weather-link a:hover {
+    color: var(--primary-light);
+    text-decoration: underline;
+}
+
+/* Mobile responsiveness for weather widget */
+@media (max-width: 768px) {
+    .weather-content .forecast-period .period-header {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+    
+    .weather-content .forecast-time {
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .weather-content .forecast-text {
+        padding: var(--spacing-2);
+        font-size: var(--font-size-sm);
+    }
+}
+
+/* Marine Alerts Widget Specific Styles */
+.alerts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-4);
+    padding: var(--spacing-3);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--accent-teal);
+}
+
+.alerts-title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+}
+
+.alert-count {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.alerts-updated {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.alert-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+}
+
+.alert-source {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.alert-severity-badge {
+    text-align: right;
+}
+
+.severity-high {
+    background: var(--error-color, #dc2626);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.severity-medium {
+    background: var(--warning-color, #f59e0b);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.severity-low {
+    background: var(--info-color, #3b82f6);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.alert-text {
+    background: rgba(255, 255, 255, 0.05);
+    padding: var(--spacing-3);
+    border-radius: var(--border-radius);
+    white-space: pre-line;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-3);
+}
+
+.alert-high {
+    border-left-color: var(--error-color, #dc2626);
+}
+
+.alert-medium {
+    border-left-color: var(--warning-color, #f59e0b);
+}
+
+.alert-low {
+    border-left-color: var(--info-color, #3b82f6);
+}
+
+.alert-time {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: var(--spacing-2);
+}
+
+/* Mobile responsiveness for alerts widget */
+@media (max-width: 768px) {
+    .alerts-header {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+    
+    .alerts-updated {
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .alert-text {
+        padding: var(--spacing-2);
+        font-size: var(--font-size-sm);
+    }
 }
 
 .wind-info {
@@ -611,7 +803,7 @@
 .tide-type {
     font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--text-primary);
+    color: var(--primary-light);
     text-transform: uppercase;
 }
 
@@ -847,9 +1039,24 @@
 }
 
 .observation-data {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: var(--spacing-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.observation-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--accent-teal);
+}
+
+.observation-value {
+    font-weight: 600;
+    color: var(--primary-light);
 }
 
 .observation-item {
