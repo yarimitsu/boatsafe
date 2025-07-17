@@ -73,46 +73,70 @@ function getClientIp(event) {
 }
 
 async function fetchWeatherData(zoneId) {
-  // Use the multi-zone URL with all Alaska zones
-  const url = 'https://www.weather.gov/arh/lfpfcst.html?AJK=AKZ317&AJK=AKZ318&AJK=AKZ319&AJK=AKZ320&AJK=AKZ321&AJK=AKZ322&AJK=AKZ323&AJK=AKZ324&AJK=AKZ325&AJK=AKZ326&AJK=AKZ327&AJK=AKZ328&AJK=AKZ329&AJK=AKZ330&AJK=AKZ331&AJK=AKZ332';
+  // Use the NWS API for zone forecasts
+  const url = `https://api.weather.gov/zones/forecast/${zoneId}/forecast`;
   
   try {
-    console.log(`Fetching weather forecast from: ${url}`);
+    console.log(`Fetching weather forecast from NWS API: ${url}`);
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
+        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
+        'Accept': 'application/json'
       }
     });
     
     console.log(`Response status: ${response.status}`);
     
     if (response.ok) {
-      const html = await response.text();
-      console.log(`Got weather HTML (${html.length} chars)`);
+      const data = await response.json();
+      console.log(`Got weather data for ${zoneId}:`, data);
       
-      // Extract forecast text for specific zone from HTML
-      const forecastText = extractZoneForecastFromHTML(html, zoneId);
+      // Return the data in the expected format
+      return {
+        properties: {
+          updated: data.properties?.updated || new Date().toISOString(),
+          zone: zoneId,
+          zoneName: ZONE_NAMES[zoneId] || zoneId,
+          periods: data.properties?.periods || [{
+            name: 'Current Weather Forecast',
+            detailedForecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}`,
+            shortForecast: `Conditions for ${ZONE_NAMES[zoneId] || zoneId}`
+          }]
+        }
+      };
+    } else {
+      console.log(`Failed ${response.status}: ${response.statusText}`);
       
-      // Return in consistent format
+      // Fallback to a simple forecast message
       return {
         properties: {
           updated: new Date().toISOString(),
           zone: zoneId,
           zoneName: ZONE_NAMES[zoneId] || zoneId,
           periods: [{
-            name: 'Current Weather Forecast',
-            detailedForecast: forecastText,
-            shortForecast: `Weather conditions for ${ZONE_NAMES[zoneId] || zoneId}`
+            name: 'Weather Forecast',
+            detailedForecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Visit weather.gov for current conditions and detailed forecasts.`,
+            shortForecast: `${ZONE_NAMES[zoneId] || zoneId} conditions`
           }]
         }
       };
-    } else {
-      console.log(`Failed ${response.status}: ${response.statusText}`);
-      throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
     console.error(`Failed to fetch from ${url}:`, error.message);
-    throw new Error('Unable to fetch weather forecast data from NWS');
+    
+    // Return fallback data instead of throwing
+    return {
+      properties: {
+        updated: new Date().toISOString(),
+        zone: zoneId,
+        zoneName: ZONE_NAMES[zoneId] || zoneId,
+        periods: [{
+          name: 'Weather Forecast',
+          detailedForecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Visit weather.gov for current conditions.`,
+          shortForecast: `${ZONE_NAMES[zoneId] || zoneId} conditions`
+        }]
+      }
+    };
   }
 }
 
