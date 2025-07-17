@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bight Watch - Alaska Marine Forecasts</title>
+    <meta name="description" content="Privacy-first marine forecasts for Alaska waters. Get NOAA weather data, tide information, and marine conditions without tracking.">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://tgftp.nws.noaa.gov https://tidesandcurrents.noaa.gov https://api.weather.gov https://www.ndbc.noaa.gov https://forecast.weather.gov; img-src 'self' data:;">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.min.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e40af">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="container">
+                <h1 class="app-title">
+                    <img src="oceanbightlogo.png" alt="Ocean Bight" class="logo">
+                    Bight Watch
+                </h1>
+                <p class="app-subtitle">Alaska Marine Forecasts</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <div class="container">
+                <!-- Location Selector -->
+                <section class="widget-container">
+                    <div id="location-selector" class="widget">
+                        <h2>Select Marine Region</h2>
+                        <div class="location-content">
+                            <div class="dropdown-container">
+                                <label for="region-dropdown" class="dropdown-label">Choose a marine region:</label>
+                                <select id="region-dropdown" class="region-dropdown">
+                                    <option value="">Select a region...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Forecast Summary -->
+                <section class="widget-container">
+                    <div id="forecast-summary" class="widget">
+                        <h2>Marine Forecast</h2>
+                        <div class="forecast-content">
+                            <div class="zone-selector">
+                                <label for="zone-dropdown" class="dropdown-label">Select specific zone:</label>
+                                <select id="zone-dropdown" class="zone-dropdown">
+                                    <option value="">Select a region first...</option>
+                                </select>
+                            </div>
+                            <div class="forecast-display">
+                                <div class="loading">Select a region to view forecast</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Alerts -->
+                <section class="widget-container">
+                    <div id="alerts" class="widget">
+                        <h2>Marine Alerts</h2>
+                        <div class="alerts-content">
+                            <div class="no-alerts">No active alerts</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Forecaster Discussion -->
+                <section class="widget-container">
+                    <div id="discussion" class="widget">
+                        <h2>Forecaster Discussion</h2>
+                        <div class="discussion-content">
+                            <div class="loading">Loading discussion...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tides -->
+                <section class="widget-container">
+                    <div id="tides" class="widget">
+                        <h2>Tide Information</h2>
+                        <div class="tides-content">
+                            <div class="tide-location-selector">
+                                <label for="tide-station-dropdown" class="dropdown-label">Select tide station:</label>
+                                <select id="tide-station-dropdown" class="tide-station-dropdown">
+                                    <option value="">Select a station...</option>
+                                </select>
+                            </div>
+                            <div class="tide-data-container">
+                                <div class="loading">Select a tide station to view data</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Observations -->
+                <section class="widget-container">
+                    <div id="observations" class="widget">
+                        <h2>Buoy Observations</h2>
+                        <div class="observations-content">
+                            <div class="buoy-region-selector">
+                                <label for="buoy-region-dropdown" class="dropdown-label">Select region:</label>
+                                <select id="buoy-region-dropdown" class="buoy-region-dropdown">
+                                    <option value="">Select a region...</option>
+                                    <option value="southeast">Southeast Alaska</option>
+                                    <option value="southcentral">Southcentral Alaska</option>
+                                    <option value="gulf">Gulf of Alaska</option>
+                                </select>
+                            </div>
+                            <div class="buoy-data-container">
+                                <div class="loading">Select a region to view buoy data</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Weather -->
+                <section class="widget-container">
+                    <div id="weather" class="widget">
+                        <h2>Weather Forecast</h2>
+                        <div class="weather-content">
+                            <div class="weather-location-selector">
+                                <label for="weather-location-dropdown" class="dropdown-label">Select location:</label>
+                                <select id="weather-location-dropdown" class="weather-location-dropdown">
+                                    <option value="">Select a location...</option>
+                                    <option value="juneau">Juneau, AK</option>
+                                    <option value="anchorage">Anchorage, AK</option>
+                                    <option value="fairbanks">Fairbanks, AK</option>
+                                    <option value="kodiak">Kodiak, AK</option>
+                                    <option value="homer">Homer, AK</option>
+                                    <option value="sitka">Sitka, AK</option>
+                                    <option value="ketchikan">Ketchikan, AK</option>
+                                </select>
+                            </div>
+                            <div class="weather-data-container">
+                                <div class="loading">Select a location to view weather forecast</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="container">
+                <p>
+                    Data provided by <a href="https://www.weather.gov" target="_blank" rel="noopener">NOAA National Weather Service</a>
+                    | <a href="https://github.com/yourusername/bight-watch" target="_blank" rel="noopener">Open Source</a>
+                </p>
+                <p class="disclaimer">
+                    For emergency situations, always consult official NOAA marine forecasts and local authorities.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar" class="status-bar">
+        <div class="status-content">
+            <span class="status-text">Ready</span>
+            <div class="status-indicator"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    
+    <script src="app.min.js"></script>
+    </body>
+</html>
