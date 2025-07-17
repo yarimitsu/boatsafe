@@ -181,25 +181,19 @@ class WeatherWidget {
         const cleanForecast = this.formatForecastText(forecastText);
         
         const html = `
-            <div class="weather-header">
-                <div class="weather-location">
+            <div class="forecast-period">
+                <div class="period-header">
                     <strong>${zone} - ${displayName}</strong>
+                    <span class="period-time">Updated: ${this.formatDate(new Date(updated))}</span>
                 </div>
-                <div class="weather-updated">
-                    <small>Updated: ${this.formatDate(new Date(updated))}</small>
+                <div class="forecast-text">
+                    ${cleanForecast}
                 </div>
-            </div>
-            <div class="weather-forecast">
-                <div class="forecast-content">
-                    <pre class="weather-text">${cleanForecast}</pre>
-                </div>
-            </div>
-            <div class="weather-footer">
-                <small>
+                <div class="weather-link">
                     <a href="https://www.weather.gov/arh/lfpfcst.html?AJK=${zone}" target="_blank" rel="noopener">
                         View on Weather.gov →
                     </a>
-                </small>
+                </div>
             </div>
         `;
 

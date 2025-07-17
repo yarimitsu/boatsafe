@@ -14,8 +14,9 @@ class Discussion {
     /**
      * Initialize the widget
      */
-    init() {
+    async init() {
         this.showLoading();
+        await this.loadDiscussion();
     }
 
     /**
@@ -29,41 +30,28 @@ class Discussion {
 
     /**
      * Load discussion for a specific office
-     * @param {string} office - Forecast office code
+     * @param {string} office - Forecast office code (optional, defaults to AJK)
      */
-    async loadDiscussion(office) {
-        if (!office) {
-            this.showError('No forecast office specified');
-            return;
-        }
-
+    async loadDiscussion(office = 'AJK') {
         this.currentOffice = office;
         this.showLoading();
 
         try {
-            // Use the new Netlify proxy function
             const currentHost = window.location.origin;
-            const proxyUrl = `${currentHost}/.netlify/functions/forecast-discussion/${office.toUpperCase()}`;
+            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
             
-            console.log(`Fetching forecast discussion via proxy: ${proxyUrl}`);
-            
-            const response = await fetch(proxyUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            if (isLocal) {
+                // Local development - show placeholder
+                this.showLocalDevPlaceholder();
+            } else {
+                // Production - fetch real data via Netlify function
+                const proxyUrl = `${currentHost}/.netlify/functions/forecast-discussion`;
+                console.log('Fetching forecast discussion from:', proxyUrl);
+                const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30 });
+                console.log('Received forecast discussion data:', data);
+                this.currentData = data;
+                this.render();
             }
-
-            const data = await response.json();
-            console.log('Received forecast discussion data:', data);
-            
-            this.currentData = data;
-            this.render();
         } catch (error) {
             console.error('Failed to load forecast discussion:', error);
             this.showError('Unable to load forecast discussion');
@@ -71,15 +59,35 @@ class Discussion {
     }
 
     /**
+     * Show local development placeholder
+     */
+    showLocalDevPlaceholder() {
+        this.content.innerHTML = `
+            <div class="forecast-period">
+                <div class="period-header">
+                    <strong>Forecast Discussion</strong>
+                    <span class="period-time">Local Development Mode</span>
+                </div>
+                <div class="forecast-text">
+                    Deploy to Netlify to see the real Area Forecast Discussion from meteorologists.
+                    <br><br>
+                    This widget displays technical meteorological analysis and reasoning behind the forecast.
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * Render the discussion
      */
     render() {
-        if (!this.currentData) {
+        if (!this.currentData || !this.currentData.properties) {
             this.showLoading();
             return;
         }
 
-        const { office, text, issued, source } = this.currentData;
+        const { properties } = this.currentData;
+        const { office, officeName, text, updated, issuedTime } = properties;
         
         if (!text || text.trim().length === 0) {
             this.showError('No discussion available');
@@ -87,12 +95,15 @@ class Discussion {
         }
 
         const html = `
-            <div class="discussion-header">
-                <div class="discussion-office">${office} Forecast Office</div>
-                <div class="discussion-issued">${this.formatDate(issued)}</div>
-                ${source ? `<div class="discussion-source">${source}</div>` : ''}
+            <div class="forecast-period">
+                <div class="period-header">
+                    <strong>Forecast Discussion - ${officeName || office}</strong>
+                    <span class="period-time">${issuedTime || this.formatDate(new Date(updated))}</span>
+                </div>
+                <div class="forecast-text">
+                    ${this.formatText(text)}
+                </div>
             </div>
-            <div class="discussion-text">${this.formatText(text)}</div>
         `;
 
         this.content.innerHTML = html;

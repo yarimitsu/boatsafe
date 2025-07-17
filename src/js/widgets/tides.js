@@ -30,7 +30,7 @@ class Tides {
      */
     async loadTideStations() {
         try {
-            const response = await window.BightWatch.http.get('./data/tide-stations.json', { cacheTTL: 1440 });
+            const response = await window.BoatSafe.http.get('./data/tide-stations.json', { cacheTTL: 1440 });
             this.tideStations = typeof response === 'string' ? JSON.parse(response) : response;
         } catch (error) {
             console.error('Failed to load tide stations:', error);
@@ -93,7 +93,7 @@ class Tides {
             const dateStr = this.formatDateForAPI(date);
             const url = `/.netlify/functions/tide-data/${stationId}?date=${dateStr}`;
             
-            const response = await window.BightWatch.http.get(url, { cacheTTL: 30 });
+            const response = await window.BoatSafe.http.get(url, { cacheTTL: 30 });
             this.currentData = response.data;
             this.render(stationId, date);
         } catch (error) {

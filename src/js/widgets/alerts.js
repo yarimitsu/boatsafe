@@ -13,8 +13,54 @@ class Alerts {
     /**
      * Initialize the widget
      */
-    init() {
-        this.showNoAlerts();
+    async init() {
+        this.showLoading();
+        await this.loadAlerts();
+    }
+
+    /**
+     * Load marine alerts data
+     */
+    async loadAlerts() {
+        try {
+            const currentHost = window.location.origin;
+            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
+            
+            if (isLocal) {
+                // Local development - show placeholder
+                this.showLocalDevPlaceholder();
+            } else {
+                // Production - fetch real data via Netlify function
+                const proxyUrl = `${currentHost}/.netlify/functions/marine-alerts`;
+                console.log('Fetching marine alerts from:', proxyUrl);
+                const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 5 });
+                console.log('Received marine alerts data:', data);
+                this.currentData = data;
+                this.render();
+            }
+        } catch (error) {
+            console.error('Failed to load marine alerts:', error);
+            this.showError('Unable to load marine alerts');
+        }
+    }
+
+    /**
+     * Show local development placeholder
+     */
+    showLocalDevPlaceholder() {
+        this.content.innerHTML = `
+            <div class="alert-item advisory">
+                <div class="alert-header">
+                    <div class="alert-title">Local Development Mode</div>
+                    <div class="alert-severity">INFO</div>
+                </div>
+                <div class="alert-description">
+                    Deploy to Netlify to see real marine alerts and warnings.
+                    <br><br>
+                    This widget will display current marine alerts, warnings, and advisories for Alaska waters.
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -59,28 +105,24 @@ class Alerts {
      * @returns {string} HTML string
      */
     renderAlert(alert) {
-        const { headline, type, severity, areas, description, issued, expires, source } = alert;
+        const { type, severity, text, effectiveTime, expirationTime, source } = alert;
         
         return `
-            <div class="alert-item ${this.getAlertClass(severity)}">
-                <div class="alert-header">
-                    <div class="alert-title">${headline || type}</div>
-                    <div class="alert-severity">${severity}</div>
+            <div class="forecast-period">
+                <div class="period-header">
+                    <strong>${type}</strong>
+                    <span class="period-time">${source}</span>
                 </div>
-                <div class="alert-source">
-                    <small>Source: ${source}</small>
+                <div class="forecast-text">
+                    ${this.formatAlertText(text)}
                 </div>
-                ${areas && areas.length > 0 ? `
-                <div class="alert-areas">
-                    <strong>Areas:</strong> ${areas.join(', ')}
+                ${effectiveTime || expirationTime ? `
+                <div class="alert-time">
+                    ${effectiveTime ? `Effective: ${effectiveTime}` : ''}
+                    ${effectiveTime && expirationTime ? ' | ' : ''}
+                    ${expirationTime ? `Until: ${expirationTime}` : ''}
                 </div>
                 ` : ''}
-                <div class="alert-time">
-                    ${this.formatMarineAlertTime(issued, expires)}
-                </div>
-                <div class="alert-description">
-                    ${this.formatDescription(description)}
-                </div>
             </div>
         `;
     }
@@ -152,6 +194,21 @@ class Alerts {
         }
         
         return timeStr || 'Time not specified';
+    }
+
+    /**
+     * Format alert text for display
+     * @param {string} text - Raw alert text
+     * @returns {string} Formatted text
+     */
+    formatAlertText(text) {
+        if (!text) return 'No details available';
+        
+        // Clean up and format the text
+        return text
+            .replace(/\s+/g, ' ')  // Normalize whitespace
+            .trim()
+            .substring(0, 500) + (text.length > 500 ? '...' : '');
     }
 
     /**

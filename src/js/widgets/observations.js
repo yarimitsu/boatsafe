@@ -353,25 +353,23 @@ class Observations {
             { key: 'PRES', label: 'Pressure', unit: 'hPa' }
         ];
 
+        // Format observations into a single text block like marine forecast
+        const observationText = keyFields.map(field => {
+            const fieldData = data.data[field.key];
+            const value = fieldData ? fieldData.value : 'N/A';
+            const unit = fieldData ? fieldData.unit : field.unit;
+            const displayValue = value === 'MM' ? 'N/A' : value;
+            return `${field.label}: ${displayValue} ${unit}`;
+        }).join(' | ');
+
         const html = `
-            <div class="station-data">
-                <div class="station-header">
+            <div class="forecast-period">
+                <div class="period-header">
                     <strong>${data.stationId} - ${data.stationName}</strong>
-                    <div class="station-time">${this.formatTime(data.timestamp)}</div>
+                    <span class="period-time">${this.formatTime(data.timestamp)}</span>
                 </div>
-                <div class="observation-items">
-                    ${keyFields.map(field => {
-                        const fieldData = data.data[field.key];
-                        const value = fieldData ? fieldData.value : 'N/A';
-                        const unit = fieldData ? fieldData.unit : field.unit;
-                        
-                        return `
-                            <div class="observation-item">
-                                <span class="label">${field.label}:</span>
-                                <span class="value">${value === 'MM' ? 'N/A' : value} ${unit}</span>
-                            </div>
-                        `;
-                    }).join('')}
+                <div class="forecast-text">
+                    ${observationText}
                 </div>
                 <div class="station-link">
                     <a href="https://www.ndbc.noaa.gov/station_page.php?station=${data.stationId}" 

@@ -1,24 +1,10 @@
 /**
  * Netlify Function: Marine Alerts Proxy
- * Fetches marine alerts and warnings from NOAA text sources
+ * Security-first proxy for NOAA Marine Alerts
  */
 
 // Rate limiting store (in-memory)
 const rateLimitStore = new Map();
-
-// Alert source configurations
-const ALERT_SOURCES = {
-  juneau_cfw: {
-    url: 'https://tgftp.nws.noaa.gov/data/raw/wh/whak47.pajk.cfw.ajk.txt',
-    name: 'Coastal Flood Warnings - Juneau',
-    type: 'coastal_flood'
-  },
-  juneau_smw: {
-    url: 'https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=SMW&format=txt&version=1&glossary=0',
-    name: 'Special Marine Warnings - Juneau',
-    type: 'marine_warning'
-  }
-};
 
 function checkRateLimit(ip) {
   const now = Date.now();
@@ -52,218 +38,157 @@ function getClientIp(event) {
          '127.0.0.1';
 }
 
-async function fetchAlertData(source) {
-  try {
-    console.log(`Fetching alert data from: ${source.url}`);
-    const response = await fetch(source.url, {
-      headers: {
-        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
-      }
-    });
-    
-    console.log(`Response status: ${response.status} for ${source.name}`);
-    
-    if (response.ok) {
-      const text = await response.text();
-      console.log(`Got alert data (${text.length} chars) from ${source.name}`);
+async function fetchMarineAlerts() {
+  // NOAA marine alert sources
+  const sources = [
+    {
+      name: 'Alaska Marine Alerts (CFW)',
+      url: 'https://tgftp.nws.noaa.gov/data/raw/wh/whak47.pajk.cfw.ajk.txt'
+    },
+    {
+      name: 'Special Marine Warning (SMW)',
+      url: 'https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=SMW&format=txt&version=1&glossary=0'
+    }
+  ];
+  
+  const alerts = [];
+  const fetchPromises = sources.map(async (source) => {
+    try {
+      console.log(`Fetching marine alerts from: ${source.url}`);
+      const response = await fetch(source.url, {
+        headers: {
+          'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
+        }
+      });
       
+      if (response.ok) {
+        const text = await response.text();
+        console.log(`Got ${source.name} data (${text.length} chars)`);
+        
+        // Parse alerts from text
+        const parsedAlerts = parseAlertsFromText(text, source.name);
+        alerts.push(...parsedAlerts);
+        
+        return {
+          source: source.name,
+          status: 'success',
+          alertCount: parsedAlerts.length,
+          text: text
+        };
+      } else {
+        console.log(`Failed to fetch ${source.name}: ${response.status}`);
+        return {
+          source: source.name,
+          status: 'error',
+          error: `HTTP ${response.status}`
+        };
+      }
+    } catch (error) {
+      console.error(`Error fetching ${source.name}:`, error.message);
       return {
         source: source.name,
-        type: source.type,
-        rawText: text,
-        timestamp: new Date().toISOString(),
-        status: 'success'
-      };
-    } else {
-      console.log(`Failed ${response.status}: ${response.statusText} for ${source.name}`);
-      return {
-        source: source.name,
-        type: source.type,
-        error: `HTTP ${response.status}`,
-        timestamp: new Date().toISOString(),
-        status: 'error'
+        status: 'error',
+        error: error.message
       };
     }
-  } catch (error) {
-    console.error(`Failed to fetch from ${source.url}:`, error.message);
-    return {
-      source: source.name,
-      type: source.type,
-      error: 'Network error',
-      timestamp: new Date().toISOString(),
-      status: 'error'
-    };
-  }
+  });
+  
+  const results = await Promise.allSettled(fetchPromises);
+  const sources_status = results.map(result => 
+    result.status === 'fulfilled' ? result.value : { status: 'error', error: 'Request failed' }
+  );
+  
+  return {
+    alerts: alerts,
+    sources: sources_status,
+    timestamp: new Date().toISOString(),
+    totalAlerts: alerts.length
+  };
 }
 
-function parseCoastalFloodWarning(text) {
-  const lines = text.split('\n');
+function parseAlertsFromText(text, sourceName) {
+  if (!text || text.trim().length === 0) {
+    return [];
+  }
+  
   const alerts = [];
   
-  let currentAlert = null;
-  let isAlertActive = false;
+  // Check if this looks like an active alert
+  const hasAlert = text.toLowerCase().includes('warning') || 
+                   text.toLowerCase().includes('advisory') || 
+                   text.toLowerCase().includes('watch') ||
+                   text.toLowerCase().includes('alert');
   
-  for (const line of lines) {
-    const trimmed = line.trim();
+  if (hasAlert) {
+    // Extract key information
+    const lines = text.split('\n').filter(line => line.trim());
     
-    // Skip empty lines
-    if (!trimmed) continue;
+    // Look for alert headers and content
+    let alertType = 'Marine Alert';
+    let alertText = text;
+    let effectiveTime = null;
+    let expirationTime = null;
     
-    // Look for alert type headers
-    if (trimmed.includes('Coastal Flood Advisory') || 
-        trimmed.includes('Coastal Flood Warning') || 
-        trimmed.includes('Coastal Flood Watch')) {
-      
-      // Extract alert type
-      const alertType = trimmed.match(/(Coastal Flood (?:Advisory|Warning|Watch))/)?.[1];
-      if (alertType) {
-        currentAlert = {
-          type: alertType,
-          headline: alertType,
-          areas: [],
-          description: '',
-          issued: '',
-          expires: '',
-          severity: getSeverityFromType(alertType)
-        };
-        isAlertActive = true;
-      }
-    }
-    
-    // Look for geographic areas (usually follow a pattern)
-    if (isAlertActive && (trimmed.includes('City and Borough') || 
-                         trimmed.includes('Island') || 
-                         trimmed.includes('Strait'))) {
-      if (currentAlert) {
-        currentAlert.areas.push(trimmed);
-      }
+    // Try to identify alert type from content
+    if (text.toLowerCase().includes('special marine warning')) {
+      alertType = 'Special Marine Warning';
+    } else if (text.toLowerCase().includes('marine weather statement')) {
+      alertType = 'Marine Weather Statement';
+    } else if (text.toLowerCase().includes('coastal flood')) {
+      alertType = 'Coastal Flood Alert';
     }
     
     // Look for time information
-    if (isAlertActive && (trimmed.includes('PM AKST') || 
-                         trimmed.includes('AM AKST') || 
-                         trimmed.includes('PM AKDT') || 
-                         trimmed.includes('AM AKDT'))) {
-      if (currentAlert) {
-        if (trimmed.includes('will expire')) {
-          currentAlert.expires = trimmed;
-        } else {
-          currentAlert.issued = trimmed;
-        }
+    const timePatterns = [
+      /(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST))/gi,
+      /until\s+(\d{1,2}:\d{2}\s*(AM|PM))/gi,
+      /effective\s+(\d{1,2}:\d{2}\s*(AM|PM))/gi
+    ];
+    
+    for (const pattern of timePatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        if (!effectiveTime) effectiveTime = matches[0];
+        else if (!expirationTime) expirationTime = matches[0];
       }
     }
     
-    // Add content to description
-    if (isAlertActive && currentAlert && 
-        !trimmed.includes('WHAK47') && 
-        !trimmed.includes('CFWAJK') && 
-        !trimmed.includes('National Weather Service') &&
-        !trimmed.includes('$$')) {
-      currentAlert.description += (currentAlert.description ? '\n' : '') + trimmed;
-    }
+    // Clean up alert text for display
+    alertText = text
+      .replace(/\$\$/g, '')  // Remove $$ markers
+      .replace(/\s+/g, ' ')  // Normalize whitespace
+      .trim();
     
-    // End of alert section
-    if (trimmed.includes('$$')) {
-      if (currentAlert) {
-        alerts.push(currentAlert);
-        currentAlert = null;
-      }
-      isAlertActive = false;
-    }
-  }
-  
-  // Add any remaining alert
-  if (currentAlert) {
-    alerts.push(currentAlert);
-  }
-  
-  return alerts;
-}
-
-function parseSpecialMarineWarning(text) {
-  const alerts = [];
-  
-  // Check if there are no alerts
-  if (text.includes('None issued by this office recently')) {
-    return alerts;
-  }
-  
-  // Parse any active warnings from the text
-  const lines = text.split('\n');
-  let currentAlert = null;
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    if (trimmed.includes('Special Marine Warning')) {
-      currentAlert = {
-        type: 'Special Marine Warning',
-        headline: 'Special Marine Warning',
-        areas: [],
-        description: '',
-        issued: '',
-        expires: '',
-        severity: 'moderate'
-      };
-    }
-    
-    if (currentAlert && trimmed && !trimmed.includes('None issued')) {
-      currentAlert.description += (currentAlert.description ? '\n' : '') + trimmed;
-    }
-  }
-  
-  if (currentAlert && currentAlert.description) {
-    alerts.push(currentAlert);
-  }
-  
-  return alerts;
-}
-
-function getSeverityFromType(alertType) {
-  if (alertType.includes('Warning')) return 'severe';
-  if (alertType.includes('Watch')) return 'moderate';
-  if (alertType.includes('Advisory')) return 'minor';
-  return 'minor';
-}
-
-function formatAlertsResponse(alertResults) {
-  const allAlerts = [];
-  const sources = [];
-  
-  for (const result of alertResults) {
-    sources.push({
-      name: result.source,
-      type: result.type,
-      status: result.status,
-      timestamp: result.timestamp,
-      error: result.error || null
+    alerts.push({
+      type: alertType,
+      source: sourceName,
+      text: alertText,
+      effectiveTime: effectiveTime,
+      expirationTime: expirationTime,
+      severity: determineAlertSeverity(alertType, text),
+      id: generateAlertId(alertType, sourceName)
     });
-    
-    if (result.status === 'success' && result.rawText) {
-      let parsedAlerts = [];
-      
-      if (result.type === 'coastal_flood') {
-        parsedAlerts = parseCoastalFloodWarning(result.rawText);
-      } else if (result.type === 'marine_warning') {
-        parsedAlerts = parseSpecialMarineWarning(result.rawText);
-      }
-      
-      // Add source information to each alert
-      parsedAlerts.forEach(alert => {
-        alert.source = result.source;
-        alert.sourceType = result.type;
-        allAlerts.push(alert);
-      });
-    }
   }
   
-  return {
-    alerts: allAlerts,
-    sources: sources,
-    totalAlerts: allAlerts.length,
-    timestamp: new Date().toISOString(),
-    status: 'success'
-  };
+  return alerts;
+}
+
+function determineAlertSeverity(alertType, text) {
+  const content = text.toLowerCase();
+  
+  if (content.includes('warning') || content.includes('emergency')) {
+    return 'high';
+  } else if (content.includes('watch') || content.includes('advisory')) {
+    return 'medium';
+  } else {
+    return 'low';
+  }
+}
+
+function generateAlertId(alertType, sourceName) {
+  const timestamp = Date.now();
+  const hash = alertType.replace(/\s+/g, '').toLowerCase() + '_' + sourceName.replace(/\s+/g, '').toLowerCase();
+  return `${hash}_${timestamp}`;
 }
 
 exports.handler = async (event, context) => {
@@ -317,13 +242,8 @@ exports.handler = async (event, context) => {
       };
     }
     
-    // Fetch data from all alert sources
-    const alertPromises = Object.values(ALERT_SOURCES).map(source => 
-      fetchAlertData(source)
-    );
-    
-    const alertResults = await Promise.all(alertPromises);
-    const response = formatAlertsResponse(alertResults);
+    // Fetch marine alerts data
+    const data = await fetchMarineAlerts();
     
     return {
       statusCode: 200,
@@ -332,7 +252,7 @@ exports.handler = async (event, context) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=300' // 5 minutes
       },
-      body: JSON.stringify(response)
+      body: JSON.stringify(data)
     };
     
   } catch (error) {

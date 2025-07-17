@@ -5,11 +5,11 @@
 
 // Valid Alaska weather zones - security whitelist
 const VALID_ZONES = new Set([
-  'AKZ317', 'AKZ318', 'AKZ319', 'AKZ320', 'AKZ321', 'AKZ322', 'AKZ323', 'AKZ324', 
+  'AKZ317', 'AKZ318', 'AKZ319', 'AKZ320', 'AKZ321', 'AKZ322', 'AKZ323', 'AKZ324',
   'AKZ325', 'AKZ326', 'AKZ327', 'AKZ328', 'AKZ329', 'AKZ330', 'AKZ331', 'AKZ332'
 ]);
 
-// Zone name mappings for AKZ zones
+// Zone name mapping
 const ZONE_NAMES = {
   'AKZ317': 'Chugach Mountains',
   'AKZ318': 'Copper River Basin',
@@ -29,7 +29,7 @@ const ZONE_NAMES = {
   'AKZ332': 'Arctic Ocean'
 };
 
-// Rate limiting store (in-memory for simplicity)
+// Rate limiting store (in-memory)
 const rateLimitStore = new Map();
 
 function validateZoneId(zoneId) {
@@ -37,8 +37,7 @@ function validateZoneId(zoneId) {
     return false;
   }
   
-  const upperZoneId = zoneId.toUpperCase();
-  return VALID_ZONES.has(upperZoneId);
+  return VALID_ZONES.has(zoneId.toUpperCase());
 }
 
 function checkRateLimit(ip) {
@@ -54,7 +53,6 @@ function checkRateLimit(ip) {
   const userData = rateLimitStore.get(ip);
   
   if (now > userData.resetTime) {
-    // Reset the window
     rateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
     return true;
   }
@@ -75,16 +73,14 @@ function getClientIp(event) {
 }
 
 async function fetchWeatherData(zoneId) {
-  // Construct the URL with the requested zone
-  const baseUrl = 'https://www.weather.gov/arh/lfpfcst.html';
-  const url = `${baseUrl}?AJK=${zoneId}`;
+  // Use the multi-zone URL for weather.gov
+  const url = `https://www.weather.gov/arh/lfpfcst.html?AJK=${zoneId}`;
   
   try {
     console.log(`Fetching weather forecast from: ${url}`);
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
       }
     });
     
@@ -94,17 +90,18 @@ async function fetchWeatherData(zoneId) {
       const html = await response.text();
       console.log(`Got weather HTML (${html.length} chars)`);
       
-      // Parse the HTML to extract weather forecast data
-      const weatherData = parseWeatherHtml(html, zoneId);
+      // Extract forecast text from HTML
+      const forecastText = extractForecastFromHTML(html, zoneId);
       
+      // Return in consistent format
       return {
         properties: {
           updated: new Date().toISOString(),
           zone: zoneId,
           zoneName: ZONE_NAMES[zoneId] || zoneId,
-          periods: weatherData.periods || [{
-            name: 'Current Weather',
-            detailedForecast: weatherData.forecast || 'Weather forecast not available',
+          periods: [{
+            name: 'Current Weather Forecast',
+            detailedForecast: forecastText,
             shortForecast: `Weather conditions for ${ZONE_NAMES[zoneId] || zoneId}`
           }]
         }
@@ -115,76 +112,54 @@ async function fetchWeatherData(zoneId) {
     }
   } catch (error) {
     console.error(`Failed to fetch from ${url}:`, error.message);
-    throw new Error('Unable to fetch weather data from NOAA');
+    throw new Error('Unable to fetch weather forecast data from NWS');
   }
 }
 
-function parseWeatherHtml(html, zoneId) {
-  // Simple HTML parsing to extract weather forecast
-  // This is a basic implementation - could be enhanced with more sophisticated parsing
-  
+function extractForecastFromHTML(html, zoneId) {
+  // Basic HTML parsing to extract forecast text
+  // Look for zone-specific content
   try {
-    // Look for forecast content in the HTML
-    const forecastMatch = html.match(/<div[^>]*class="[^"]*forecast[^"]*"[^>]*>(.*?)<\/div>/is);
-    const contentMatch = html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/is);
-    const weatherMatch = html.match(/<pre[^>]*>(.*?)<\/pre>/is);
+    // Remove HTML tags and extract text content
+    let text = html.replace(/<[^>]*>/g, ' ');
     
-    let forecastText = '';
+    // Clean up whitespace
+    text = text.replace(/\s+/g, ' ').trim();
     
-    if (weatherMatch) {
-      forecastText = weatherMatch[1].trim();
-    } else if (forecastMatch) {
-      forecastText = forecastMatch[1].replace(/<[^>]*>/g, '').trim();
-    } else if (contentMatch) {
-      forecastText = contentMatch[1].replace(/<[^>]*>/g, '').trim();
-    }
+    // Look for forecast patterns
+    const forecastPatterns = [
+      new RegExp(`${zoneId}[^.]*\\.`, 'gi'),
+      /TODAY[^.]*\./gi,
+      /TONIGHT[^.]*\./gi,
+      /TEMPERATURE[^.]*\./gi,
+      /WIND[^.]*\./gi,
+      /SKY[^.]*\./gi
+    ];
     
-    // If we couldn't extract specific forecast, try to find any meaningful text
-    if (!forecastText) {
-      const bodyMatch = html.match(/<body[^>]*>(.*?)<\/body>/is);
-      if (bodyMatch) {
-        const bodyText = bodyMatch[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        // Look for weather-related keywords
-        const weatherKeywords = ['temperature', 'wind', 'weather', 'forecast', 'conditions', 'partly', 'mostly', 'sunny', 'cloudy', 'rain', 'snow'];
-        const sentences = bodyText.split(/[.!?]+/);
-        const weatherSentences = sentences.filter(s => 
-          weatherKeywords.some(keyword => s.toLowerCase().includes(keyword))
-        );
-        
-        if (weatherSentences.length > 0) {
-          forecastText = weatherSentences.slice(0, 3).join('. ').trim();
-        }
+    let extractedText = '';
+    
+    for (const pattern of forecastPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        extractedText += matches.join(' ') + ' ';
       }
     }
     
-    if (!forecastText) {
-      forecastText = `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId} - Data temporarily unavailable. Please check weather.gov directly.`;
+    if (extractedText.trim()) {
+      return extractedText.trim();
     }
     
-    return {
-      forecast: forecastText,
-      periods: [{
-        name: 'Current Weather',
-        detailedForecast: forecastText,
-        shortForecast: `Weather conditions for ${ZONE_NAMES[zoneId] || zoneId}`
-      }]
-    };
+    // Fallback: return first 500 characters of cleaned text
+    return text.substring(0, 500) + (text.length > 500 ? '...' : '');
     
   } catch (error) {
-    console.error('Error parsing weather HTML:', error);
-    return {
-      forecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId} - Parsing error. Please check weather.gov directly.`,
-      periods: [{
-        name: 'Current Weather',
-        detailedForecast: 'Weather data temporarily unavailable due to parsing error.',
-        shortForecast: `Weather conditions for ${ZONE_NAMES[zoneId] || zoneId}`
-      }]
-    };
+    console.error('Error extracting forecast text:', error);
+    return `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId} - please visit weather.gov for full details.`;
   }
 }
 
 exports.handler = async (event, context) => {
-  console.log('Weather function called with:', {
+  console.log('Weather forecast function called with:', {
     method: event.httpMethod,
     path: event.path,
     headers: event.headers
@@ -279,13 +254,13 @@ exports.handler = async (event, context) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600' // 1 hour
+        'Cache-Control': 'public, max-age=1800' // 30 minutes
       },
       body: JSON.stringify(data)
     };
     
   } catch (error) {
-    console.error('Weather proxy error:', error);
+    console.error('Weather forecast proxy error:', error);
     
     return {
       statusCode: 500,
