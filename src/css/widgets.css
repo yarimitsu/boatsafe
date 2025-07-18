@@ -92,8 +92,25 @@
         line-height: 1.4;
         word-wrap: break-word;
         overflow-wrap: break-word;
+        word-break: break-word;
         max-width: 100%;
+        white-space: pre-wrap;
+        hyphens: auto;
     }
+}
+
+/* Marine Forecast Widget Specific Styles */
+.forecast-display {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.forecast-content .period-text,
+.forecast-content .forecast-text {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 /* Location Selector Widget */
