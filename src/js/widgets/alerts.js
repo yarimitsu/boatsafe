@@ -92,7 +92,7 @@ class Alerts {
                     <span class="alert-count">${alerts.length} active</span>
                 </div>
                 <div class="alerts-updated">
-                    <span class="period-time">Updated: ${this.formatDate(new Date(this.currentData.timestamp))}</span>
+                    <span class="period-time">Updated: ${this.currentData.issuedTime || this.formatDate(new Date(this.currentData.timestamp))}</span>
                 </div>
             </div>
         `;
@@ -116,27 +116,33 @@ class Alerts {
      * @returns {string} HTML string
      */
     renderAlert(alert) {
-        const { type, severity, text, effectiveTime, expirationTime, source } = alert;
+        const { type, severity, text, effectiveTime, expirationTime, source, headline, areas } = alert;
+        
+        // Format times for display
+        const effectiveDisplay = effectiveTime ? this.formatDate(new Date(effectiveTime)) : null;
+        const expirationDisplay = expirationTime ? this.formatDate(new Date(expirationTime)) : null;
         
         return `
             <div class="forecast-period alert-${severity}">
                 <div class="period-header">
                     <div class="alert-title-section">
                         <strong>${type}</strong>
+                        ${areas ? `<span class="alert-areas">${areas}</span>` : ''}
                         <span class="alert-source">${source}</span>
                     </div>
                     <div class="alert-severity-badge">
                         <span class="severity-${severity}">${severity.toUpperCase()}</span>
                     </div>
                 </div>
+                ${headline ? `<div class="alert-headline">${headline}</div>` : ''}
                 <div class="forecast-text alert-text">
                     ${this.formatAlertText(text)}
                 </div>
-                ${effectiveTime || expirationTime ? `
+                ${effectiveDisplay || expirationDisplay ? `
                 <div class="alert-time">
-                    ${effectiveTime ? `Effective: ${effectiveTime}` : ''}
-                    ${effectiveTime && expirationTime ? ' | ' : ''}
-                    ${expirationTime ? `Until: ${expirationTime}` : ''}
+                    ${effectiveDisplay ? `Effective: ${effectiveDisplay}` : ''}
+                    ${effectiveDisplay && expirationDisplay ? ' | ' : ''}
+                    ${expirationDisplay ? `Until: ${expirationDisplay}` : ''}
                 </div>
                 ` : ''}
             </div>

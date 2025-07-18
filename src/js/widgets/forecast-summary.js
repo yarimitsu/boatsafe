@@ -198,7 +198,11 @@ class ForecastSummary {
                 // Production - use Netlify function
                 const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
                 console.log(`Fetching forecast for ${zoneId} from:`, proxyUrl);
-                data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
+                const response = await fetch(proxyUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                data = await response.json();
             }
             
             console.log('Received data:', data);

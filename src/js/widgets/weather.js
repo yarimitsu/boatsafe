@@ -132,7 +132,11 @@ class WeatherWidget {
                 // Production - use Netlify function
                 const proxyUrl = `${currentHost}/.netlify/functions/weather-forecast/${zoneId}`;
                 console.log(`Fetching weather for ${zoneId} from:`, proxyUrl);
-                data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 60, skipCache: false });
+                const response = await fetch(proxyUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                data = await response.json();
             }
             
             console.log('Received weather data:', data);

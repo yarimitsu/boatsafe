@@ -165,14 +165,24 @@ async function fetchNOAAData(zoneId) {
       const text = await response.text();
       console.log(`Got forecast text (${text.length} chars)`);
       
+      // Extract issued time from forecast text
+      let issuedTime = null;
+      const issuedMatch = text.match(/ISSUED.*?(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST).*?)/i) ||
+                         text.match(/(\d{1,2}\/\d{1,2}\/\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i);
+      if (issuedMatch) {
+        issuedTime = issuedMatch[1] || issuedMatch[0];
+      }
+      
       // Convert to JSON format
       return {
         properties: {
           updated: new Date().toISOString(),
+          issued: issuedTime ? issuedTime : new Date().toISOString(),
           periods: [{
             name: 'Marine Forecast',
             detailedForecast: text,
-            shortForecast: 'Marine conditions for zone ' + zoneId.toUpperCase()
+            shortForecast: 'Marine conditions for zone ' + zoneId.toUpperCase(),
+            issueTime: issuedTime
           }]
         }
       };

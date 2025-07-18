@@ -39,139 +39,119 @@ function getClientIp(event) {
 }
 
 async function fetchMarineAlerts() {
-  // NOAA marine alert sources
-  const sources = [
-    {
-      name: 'Alaska Marine Alerts (CFW)',
-      url: 'https://tgftp.nws.noaa.gov/data/raw/wh/whak47.pajk.cfw.ajk.txt'
-    },
-    {
-      name: 'Special Marine Warning (SMW)',
-      url: 'https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=SMW&format=txt&version=1&glossary=0'
-    }
-  ];
+  // Use NWS API for current Alaska marine alerts
+  const apiUrl = 'https://api.weather.gov/alerts?area=AK&status=actual&urgency=immediate,expected&severity=minor,moderate,severe,extreme';
   
   const alerts = [];
-  const fetchPromises = sources.map(async (source) => {
-    try {
-      console.log(`Fetching marine alerts from: ${source.url}`);
-      const response = await fetch(source.url, {
-        headers: {
-          'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
-        }
+  let sources_status = [];
+  
+  try {
+    console.log(`Fetching current Alaska alerts from NWS API: ${apiUrl}`);
+    const response = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
+        'Accept': 'application/geo+json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`Got ${data.features?.length || 0} alerts from NWS API`);
+      
+      // Filter for marine-related alerts
+      const marineAlerts = data.features?.filter(feature => {
+        const props = feature.properties;
+        const event = props.event?.toLowerCase() || '';
+        const headline = props.headline?.toLowerCase() || '';
+        const description = props.description?.toLowerCase() || '';
+        
+        // Check if alert is marine-related
+        return event.includes('marine') || 
+               event.includes('small craft') || 
+               event.includes('gale') || 
+               event.includes('storm warning') || 
+               headline.includes('marine') || 
+               headline.includes('small craft') || 
+               headline.includes('coastal') ||
+               description.includes('marine') ||
+               description.includes('waters') ||
+               description.includes('boaters');
+      }) || [];
+      
+      console.log(`Found ${marineAlerts.length} marine-related alerts`);
+      
+      // Convert to our alert format
+      marineAlerts.forEach(feature => {
+        const props = feature.properties;
+        alerts.push({
+          type: props.event || 'Marine Alert',
+          source: 'NWS Alaska Region',
+          text: props.description || props.headline || 'No description available',
+          headline: props.headline,
+          effectiveTime: props.effective,
+          expirationTime: props.expires,
+          severity: props.severity?.toLowerCase() || 'moderate',
+          urgency: props.urgency?.toLowerCase() || 'expected',
+          areas: props.areaDesc,
+          id: props.id || generateAlertId(props.event, 'NWS_API')
+        });
       });
       
-      if (response.ok) {
-        const text = await response.text();
-        console.log(`Got ${source.name} data (${text.length} chars)`);
-        
-        // Parse alerts from text
-        const parsedAlerts = parseAlertsFromText(text, source.name);
-        alerts.push(...parsedAlerts);
-        
-        return {
-          source: source.name,
-          status: 'success',
-          alertCount: parsedAlerts.length,
-          text: text
-        };
-      } else {
-        console.log(`Failed to fetch ${source.name}: ${response.status}`);
-        return {
-          source: source.name,
-          status: 'error',
-          error: `HTTP ${response.status}`
-        };
-      }
-    } catch (error) {
-      console.error(`Error fetching ${source.name}:`, error.message);
-      return {
-        source: source.name,
+      sources_status.push({
+        source: 'NWS API (Alaska Marine Alerts)',
+        status: 'success',
+        alertCount: alerts.length,
+        totalFeatures: data.features?.length || 0
+      });
+      
+    } else {
+      console.log(`Failed to fetch from NWS API: ${response.status}`);
+      sources_status.push({
+        source: 'NWS API (Alaska Marine Alerts)',
         status: 'error',
-        error: error.message
-      };
+        error: `HTTP ${response.status}`
+      });
     }
-  });
+  } catch (error) {
+    console.error('Error fetching from NWS API:', error.message);
+    sources_status.push({
+      source: 'NWS API (Alaska Marine Alerts)',
+      status: 'error',
+      error: error.message
+    });
+  }
   
-  const results = await Promise.allSettled(fetchPromises);
-  const sources_status = results.map(result => 
-    result.status === 'fulfilled' ? result.value : { status: 'error', error: 'Request failed' }
-  );
-  
+  // Use the most recent alert effective time as the issued time, or current time if no alerts
+  let issuedTime = null;
+  if (alerts.length > 0) {
+    // Find the most recent effective time
+    const effectiveTimes = alerts
+      .map(alert => alert.effectiveTime)
+      .filter(time => time)
+      .map(time => new Date(time))
+      .sort((a, b) => b.getTime() - a.getTime()); // Sort newest first
+    
+    if (effectiveTimes.length > 0) {
+      issuedTime = effectiveTimes[0].toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
+
   return {
     alerts: alerts,
     sources: sources_status,
     timestamp: new Date().toISOString(),
+    issuedTime: issuedTime,
     totalAlerts: alerts.length
   };
 }
 
-function parseAlertsFromText(text, sourceName) {
-  if (!text || text.trim().length === 0) {
-    return [];
-  }
-  
-  const alerts = [];
-  
-  // Check if this looks like an active alert
-  const hasAlert = text.toLowerCase().includes('warning') || 
-                   text.toLowerCase().includes('advisory') || 
-                   text.toLowerCase().includes('watch') ||
-                   text.toLowerCase().includes('alert');
-  
-  if (hasAlert) {
-    // Extract key information
-    const lines = text.split('\n').filter(line => line.trim());
-    
-    // Look for alert headers and content
-    let alertType = 'Marine Alert';
-    let alertText = text;
-    let effectiveTime = null;
-    let expirationTime = null;
-    
-    // Try to identify alert type from content
-    if (text.toLowerCase().includes('special marine warning')) {
-      alertType = 'Special Marine Warning';
-    } else if (text.toLowerCase().includes('marine weather statement')) {
-      alertType = 'Marine Weather Statement';
-    } else if (text.toLowerCase().includes('coastal flood')) {
-      alertType = 'Coastal Flood Alert';
-    }
-    
-    // Look for time information
-    const timePatterns = [
-      /(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST))/gi,
-      /until\s+(\d{1,2}:\d{2}\s*(AM|PM))/gi,
-      /effective\s+(\d{1,2}:\d{2}\s*(AM|PM))/gi
-    ];
-    
-    for (const pattern of timePatterns) {
-      const matches = text.match(pattern);
-      if (matches) {
-        if (!effectiveTime) effectiveTime = matches[0];
-        else if (!expirationTime) expirationTime = matches[0];
-      }
-    }
-    
-    // Clean up alert text for display
-    alertText = text
-      .replace(/\$\$/g, '')  // Remove $$ markers
-      .replace(/\s+/g, ' ')  // Normalize whitespace
-      .trim();
-    
-    alerts.push({
-      type: alertType,
-      source: sourceName,
-      text: alertText,
-      effectiveTime: effectiveTime,
-      expirationTime: expirationTime,
-      severity: determineAlertSeverity(alertType, text),
-      id: generateAlertId(alertType, sourceName)
-    });
-  }
-  
-  return alerts;
-}
+// Legacy function - no longer needed with NWS API
+// Kept for compatibility but not used
 
 function determineAlertSeverity(alertType, text) {
   const content = text.toLowerCase();
