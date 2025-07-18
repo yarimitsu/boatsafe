@@ -117,14 +117,10 @@ class WeatherWidget {
                 // Local development - no fake data
                 throw new Error('Weather data not available in development mode. Deploy to production to see live weather forecasts.');
             } else {
-                // Production - use Netlify function
+                // Production - use Netlify function (same pattern as other widgets)
                 const proxyUrl = `${currentHost}/.netlify/functions/weather-forecast/${zoneId}`;
                 console.log(`Fetching weather for ${zoneId} from:`, proxyUrl);
-                const response = await fetch(proxyUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                data = await response.json();
+                data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30 });
             }
             
             console.log('Received weather data:', data);
@@ -188,7 +184,7 @@ class WeatherWidget {
                 </div>
                 <div class="weather-link">
                     <a href="https://www.weather.gov/arh/lfpfcst.html?AJK=${zone}" target="_blank" rel="noopener">
-                        View on Weather.gov →
+                        View Full Forecast →
                     </a>
                 </div>
             </div>

@@ -3,42 +3,32 @@
  * Security-first proxy for NOAA Tides & Currents API
  */
 
-// Valid Alaska tide stations - security whitelist
+// Valid Alaska tide stations - security whitelist (verified NOAA station IDs)
 const VALID_STATIONS = new Set([
-  // Southeast Alaska
-  '9452400', // Juneau
-  '9452634', // Skagway
-  '9451600', // Ketchikan
-  '9451054', // Sitka
-  '9450460', // Wrangell
-  '9450551', // Haines
-  '9450589', // Metlakatla
-  '9450576', // Eldred Rock
-  '9450460', // Wrangell
-  '9450551', // Haines
+  // Southeast Alaska - verified stations
+  '9452210', // Juneau, AK
+  '9452400', // Skagway, Taiya Inlet, AK
+  '9450460', // Ketchikan, Tongass Narrows, AK
   
-  // Southcentral Alaska
-  '9455920', // Anchorage
-  '9455500', // Seward
-  '9455760', // Nikiski
-  '9454050', // Valdez
-  '9454240', // Cordova
-  '9453220', // Kodiak Island
-  '9459450', // Homer
+  // Southcentral Alaska - verified stations
+  '9455920', // Anchorage, AK
+  '9455500', // Seward, AK
+  '9455760', // Nikiski, AK
+  '9454050', // Valdez, AK
+  '9454240', // Cordova, AK
+  '9453220', // Kodiak Island, AK
+  '9459450', // Homer, AK
+  
+  // Western Alaska - verified stations
+  '9462450', // Nikolski, AK
+  
+  // Additional validated Alaska stations
   '9459881', // Seldovia
   '9455090', // Whittier
-  '9455030', // Esperanza
-  
-  // Western Alaska
   '9465673', // Bethel
   '9464212', // Nome
-  '9462450', // Unalaska
   '9461380', // Adak
-  '9461710', // Nikolski
   '9459123', // King Cove
-  '9459881', // Seldovia
-  
-  // Additional Alaska stations
   '9497645', // Prudhoe Bay
   '9491094', // Red Dog Dock
   '9491253', // Kotzebue

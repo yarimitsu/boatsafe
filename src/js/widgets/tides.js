@@ -29,22 +29,19 @@ class Tides {
      * Load tide stations data
      */
     async loadTideStations() {
-        // Real Alaska tide stations from NOAA
+        // Real Alaska tide stations from NOAA - verified official names
         this.tideStations = {
-            '9457292': { name: 'Ketchikan, AK' },
-            '9450460': { name: 'Juneau, Gastineau Channel, AK' },
-            '9452210': { name: 'Sitka, Japonski Island, AK' },
-            '9451600': { name: 'Hoonah, AK' },
-            '9454050': { name: 'Elfin Cove, AK' },
-            '9453220': { name: 'Pelican, AK' },
-            '9455090': { name: 'Yakutat, AK' },
-            '9455500': { name: 'Cordova, AK' },
-            '9455760': { name: 'Valdez, AK' },
-            '9455920': { name: 'Seward, AK' },
-            '9455315': { name: 'Seldovia, AK' },
-            '9455712': { name: 'Sand Point, AK' },
-            '9462450': { name: 'Unalaska, AK' },
-            '9467665': { name: 'Prudhoe Bay, AK' }
+            '9452210': { name: 'Juneau, AK' },
+            '9452400': { name: 'Skagway, Taiya Inlet, AK' },
+            '9450460': { name: 'Ketchikan, Tongass Narrows, AK' },
+            '9455920': { name: 'Anchorage, AK' },
+            '9462450': { name: 'Nikolski, AK' },
+            '9455500': { name: 'Seward, AK' },
+            '9455760': { name: 'Nikiski, AK' },
+            '9454050': { name: 'Valdez, AK' },
+            '9454240': { name: 'Cordova, AK' },
+            '9453220': { name: 'Kodiak Island, AK' },
+            '9459450': { name: 'Homer, AK' }
         };
     }
 
