@@ -82,16 +82,16 @@
                     </div>
                 </section>
 
-                <!-- Buoy Observations -->
+                <!-- SEAK Marine Observations -->
                 <section class="widget-container">
                     <div id="observations" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Buoy Observations
+                            SEAK Marine Observations
                         </h2>
                         <div class="observations-content">
                             <div class="station-selector">
-                                <label for="station-dropdown" class="dropdown-label">Select buoy station:</label>
+                                <label for="station-dropdown" class="dropdown-label">Select observation station:</label>
                                 <select id="station-dropdown" class="station-dropdown">
                                     <option value="">Select a station...</option>
                                 </select>
@@ -150,15 +150,27 @@
                     </div>
                 </section>
 
-                <!-- Alerts -->
+                <!-- Coastal Forecasts -->
                 <section class="widget-container">
-                    <div id="alerts" class="widget">
+                    <div id="coastal-forecast" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Marine Alerts
+                            Coastal Forecasts
                         </h2>
-                        <div class="alerts-content">
-                            <div class="no-alerts">No active alerts</div>
+                        <div class="coastal-forecast-content">
+                            <div class="coastal-selector">
+                                <label for="coastal-region-dropdown" class="dropdown-label">Select forecast region:</label>
+                                <select id="coastal-region-dropdown" class="region-dropdown">
+                                    <option value="">Select a region...</option>
+                                </select>
+                                <label for="coastal-location-dropdown" class="dropdown-label">Select location:</label>
+                                <select id="coastal-location-dropdown" class="location-dropdown">
+                                    <option value="">Select a region first...</option>
+                                </select>
+                            </div>
+                            <div class="coastal-forecast-display">
+                                <div class="loading">Select a region to view coastal forecast</div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -195,9 +207,9 @@
     <script src="js/widgets/location-selector.js"></script>
     <script src="js/widgets/forecast-summary.js"></script>
     <script src="js/widgets/discussion.js"></script>
-    <script src="js/widgets/alerts.js"></script>
+    <script src="js/widgets/coastal-forecast.js"></script>
     <script src="js/widgets/tides.js"></script>
-    <script src="js/widgets/observations.js"></script>
+    <script src="js/widgets/seak-observations.js"></script>
     <script src="js/widgets/weather.js"></script>
     <script src="js/app.js"></script>
 </body>

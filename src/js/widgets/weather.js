@@ -45,11 +45,19 @@ class WeatherWidget {
             const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 15 }); // 15 minutes cache
             
             console.log('Received weather warnings data:', data);
+            console.log('Data structure:', {
+                hasWarnings: !!data.warnings,
+                warningsKeys: data.warnings ? Object.keys(data.warnings) : [],
+                warningsCount: data.warnings ? Object.keys(data.warnings).length : 0,
+                officeName: data.officeName,
+                updated: data.updated
+            });
             
             if (data.warnings) {
                 this.currentData = data;
                 this.renderWarnings();
             } else {
+                console.error('Invalid response structure:', data);
                 throw new Error('No warnings data received - invalid response structure');
             }
         } catch (error) {
@@ -68,6 +76,14 @@ class WeatherWidget {
         }
 
         const { warnings, updated, officeName } = this.currentData;
+        
+        // Check if all warnings are empty/inactive
+        const activeWarnings = Object.values(warnings).filter(warning => warning.hasContent);
+        console.log(`Rendering ${Object.keys(warnings).length} total warnings, ${activeWarnings.length} active`);
+        
+        if (activeWarnings.length === 0) {
+            console.log('No active warnings to display');
+        }
         
         // Create header
         const headerHtml = `

@@ -73,9 +73,9 @@ class BoatSafeApp {
         this.widgets = {
             forecastSummary: new ForecastSummary(),
             discussion: new Discussion(),
-            alerts: new Alerts(),
+            coastalForecast: new CoastalForecast(),
             tides: new Tides(),
-            observations: new Observations(),
+            observations: new SEAKObservations(),
             weather: new WeatherWidget()
         };
         
@@ -181,15 +181,11 @@ class BoatSafeApp {
                     console.warn('Discussion loading failed:', err);
                     return { error: 'Discussion not available', type: 'discussion' };
                 }),
-                this.loadMarineAlerts().catch(err => {
-                    console.warn('Marine alerts loading failed:', err);
-                    return { alerts: [], error: 'Marine alerts not available', type: 'alerts' };
-                }),
                 this.loadTides(regionId).catch(err => {
                     console.warn('Tides loading failed:', err);
                     return { error: 'Tide data not available', type: 'tides' };
                 }),
-                this.loadObservations(regionId).catch(err => {
+                Promise.resolve({ success: true, type: 'observations' }).catch(err => {
                     console.warn('Observations loading failed:', err);
                     return { error: 'Observation data not available', type: 'observations' };
                 })
@@ -199,7 +195,7 @@ class BoatSafeApp {
 
             // Update widgets with results
             results.forEach((result, index) => {
-                const widgetNames = ['Discussion', 'Marine Alerts', 'Tides', 'Observations'];
+                const widgetNames = ['Discussion', 'Tides', 'Observations'];
                 console.log(`Widget ${index} (${widgetNames[index]}): status=${result.status}, value=`, result.value);
                 
                 if (result.status === 'fulfilled' && result.value && !result.value.error) {
@@ -208,17 +204,13 @@ class BoatSafeApp {
                             this.widgets.discussion.update(result.value);
                             console.log('Updated discussion widget');
                             break;
-                        case 1: // Marine Alerts
-                            this.widgets.alerts.update(result.value);
-                            console.log('Updated marine alerts widget');
-                            break;
-                        case 2: // Tides
+                        case 1: // Tides
                             this.widgets.tides.update(result.value);
                             console.log('Updated tides widget');
                             break;
                         case 3: // Observations
-                            this.widgets.observations.update(result.value);
-                            console.log('Updated observations widget');
+                            // SEAK observations widget handles its own initialization
+                            console.log('SEAK observations widget is self-contained');
                             break;
                     }
                 } else {
@@ -237,7 +229,8 @@ class BoatSafeApp {
                             this.widgets.tides.showDefault();
                             break;
                         case 3: // Observations
-                            this.widgets.observations.showError('Observation data not available - check individual buoy websites');
+                            // SEAK observations widget handles its own errors
+                            console.log('SEAK observations widget handles its own errors');
                             break;
                     }
                 }
@@ -490,34 +483,15 @@ class BoatSafeApp {
     }
 
     /**
-     * Load buoy observations
+     * Load buoy observations - DEPRECATED
+     * SEAK observations widget now handles its own data loading
      * @param {string} zoneId - Zone ID
      * @returns {Promise} Observations data
      */
     async loadObservations(zoneId) {
-        // This is a placeholder - in production, you'd map zones to buoy stations
-        const stations = this.getBuoyStations(zoneId);
-        if (!stations || stations.length === 0) {
-            throw new Error('No buoy stations mapped for this zone');
-        }
-
-        const endpoint = this.endpoints.buoy;
-        const promises = stations.map(station => {
-            const url = endpoint.baseUrl + endpoint.format.replace('{station}', station);
-            return window.BoatSafe.http.get(url, { cacheTTL: 10 });
-        });
-
-        try {
-            const results = await Promise.allSettled(promises);
-            const observations = results
-                .filter(result => result.status === 'fulfilled')
-                .map(result => result.value);
-            
-            return observations;
-        } catch (error) {
-            console.error('Failed to load observations:', error);
-            throw new Error('Observation data not available');
-        }
+        // This method is no longer used - SEAK observations widget handles its own data
+        console.log('loadObservations method is deprecated - SEAK observations widget handles its own data');
+        return { success: true, type: 'observations' };
     }
 
     /**

@@ -119,25 +119,26 @@ class Discussion {
         
         // Clean unwanted content first
         let cleanedText = text
-            // Remove USA.gov references and associated bullet points
-            .replace(/usa\.gov[^\n]*/gi, '')
-            // Remove bullet points that often appear after usa.gov references
+            // Remove USA.gov references and everything after them until next section
+            .replace(/usa\.gov.*?(?=\n\n|\n\s*\n|$)/gis, '')
+            // Remove bullet points and lists that often appear after usa.gov
             .replace(/^\s*[•·\-\*]\s*[^\n]*$/gm, '')
-            // Remove any remaining bullet-like patterns
+            // Remove remaining bullet-like patterns
             .replace(/\s*[•·▪▫]\s*/g, ' ')
-            // Remove excessive whitespace and normalize line breaks
-            .replace(/\s+/g, ' ')
-            .replace(/\n\s*\n/g, '\n\n')
+            // Remove excessive whitespace but preserve intentional line breaks
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n[ \t]+/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
             .trim();
 
-        // Smart paragraph breaking for meteorological discussions
+        // Enhanced paragraph breaking for meteorological discussions
         let paragraphs = [];
         
-        // First try splitting on double line breaks
-        let initialSplit = cleanedText.split(/\n\n+/);
+        // First try splitting on double line breaks or section markers
+        let initialSplit = cleanedText.split(/\n\n+|\.{3,}/);
         
         if (initialSplit.length === 1) {
-            // No double line breaks found, use intelligent breaking
+            // No clear breaks found, use intelligent sentence-based breaking
             let sentences = cleanedText.split(/\.\s+/);
             let currentParagraph = '';
             
@@ -150,7 +151,7 @@ class Discussion {
                     sentence += '.';
                 }
                 
-                // Start new paragraph on certain meteorological keywords
+                // Start new paragraph on meteorological section keywords
                 if (this.shouldStartNewParagraph(sentence, currentParagraph)) {
                     if (currentParagraph.trim()) {
                         paragraphs.push(currentParagraph.trim());
@@ -160,8 +161,8 @@ class Discussion {
                     currentParagraph += (currentParagraph ? ' ' : '') + sentence;
                 }
                 
-                // Break long paragraphs (more than 4 sentences)
-                if (currentParagraph.split(/\.\s+/).length >= 4) {
+                // Break long paragraphs (more than 3 sentences for better readability)
+                if (currentParagraph.split(/\.\s+/).length >= 3) {
                     paragraphs.push(currentParagraph.trim());
                     currentParagraph = '';
                 }
@@ -172,17 +173,22 @@ class Discussion {
                 paragraphs.push(currentParagraph.trim());
             }
         } else {
-            // Use existing double line break splits but clean them
+            // Use existing breaks but clean and filter them
             paragraphs = initialSplit
                 .map(p => p.trim())
-                .filter(p => p.length > 10); // Filter out very short fragments
+                .filter(p => p.length > 15); // Filter out very short fragments
         }
         
-        // Format paragraphs with proper HTML
+        // Ensure minimum paragraph count for readability
+        if (paragraphs.length === 1 && paragraphs[0].length > 600) {
+            paragraphs = this.forceParagraphBreaks(paragraphs[0]);
+        }
+        
+        // Format paragraphs with proper HTML spacing
         let formatted = paragraphs
             .map(paragraph => {
-                // Further break very long paragraphs at sentence boundaries
-                if (paragraph.length > 800) {
+                // Break very long paragraphs at sentence boundaries
+                if (paragraph.length > 700) {
                     return this.breakLongParagraph(paragraph);
                 }
                 return `<p>${paragraph}</p>`;
@@ -194,20 +200,22 @@ class Discussion {
             formatted = `<p>${cleanedText.replace(/\n/g, '<br>')}</p>`;
         }
         
-        // Enhance formatting with weather terminology
+        // Enhanced formatting with weather terminology
         formatted = formatted
-            // Highlight time periods
+            // Highlight time periods with better formatting
             .replace(/\b(TODAY|TONIGHT|TOMORROW|THIS EVENING|THIS MORNING|THIS AFTERNOON|SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY)\b/gi, '<strong>$1</strong>')
             // Highlight weather systems and patterns
-            .replace(/\b(LOW PRESSURE|HIGH PRESSURE|FRONT|TROUGH|RIDGE|STORM SYSTEM|WEATHER SYSTEM)\b/gi, '<strong>$1</strong>')
-            // Highlight weather conditions
-            .replace(/\b(RAIN|SNOW|THUNDERSTORMS|FOG|WIND|GALE|STORM|CLEAR|CLOUDY|PARTLY CLOUDY|OVERCAST|SHOWERS|DRIZZLE)\b/gi, '<em>$1</em>')
+            .replace(/\b(LOW PRESSURE|HIGH PRESSURE|FRONT|TROUGH|RIDGE|STORM SYSTEM|WEATHER SYSTEM|CYCLONE|ANTICYCLONE)\b/gi, '<strong>$1</strong>')
+            // Highlight weather conditions with subtle emphasis
+            .replace(/\b(RAIN|SNOW|THUNDERSTORMS|FOG|WIND|GALE|STORM|CLEAR|CLOUDY|PARTLY CLOUDY|OVERCAST|SHOWERS|DRIZZLE|VISIBILITY|PRECIPITATION)\b/gi, '<em>$1</em>')
             // Highlight marine conditions  
-            .replace(/\b(SEAS|WAVES|SWELL|CHOPPY|ROUGH|CALM|SURF|BREAKERS)\b/gi, '<em>$1</em>')
+            .replace(/\b(SEAS|WAVES|SWELL|CHOPPY|ROUGH|CALM|SURF|BREAKERS|SIGNIFICANT WAVE HEIGHT|COMBINED SEAS)\b/gi, '<em>$1</em>')
             // Format wind directions with better styling
             .replace(/\b([NSEW]|NE|NW|SE|SW|NORTH|SOUTH|EAST|WEST|NORTHEAST|NORTHWEST|SOUTHEAST|SOUTHWEST)\b/gi, '<span class="wind-direction">$1</span>')
             // Highlight wind speeds and weather measurements
-            .replace(/\b(\d+\s*(?:MPH|KT|KNOTS?|FT|FEET|INCHES?|IN))\b/gi, '<span class="weather-measurement">$1</span>');
+            .replace(/\b(\d+\s*(?:MPH|KT|KNOTS?|FT|FEET|INCHES?|IN|MILES?|NAUTICAL MILES?))\b/gi, '<span class="weather-measurement">$1</span>')
+            // Format temperature ranges
+            .replace(/\b(\d+\s*(?:DEGREES?|°F?|°C?))\b/gi, '<span class="weather-measurement">$1</span>');
         
         return formatted;
     }
@@ -226,7 +234,7 @@ class Discussion {
             'SYNOPSIS', 'DISCUSSION', 'TONIGHT', 'TOMORROW', 'SUNDAY', 'MONDAY', 
             'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
             'MARINE', 'AVIATION', 'FIRE WEATHER', 'SHORT TERM', 'LONG TERM',
-            'NEAR TERM', 'EXTENDED'
+            'NEAR TERM', 'EXTENDED', 'FORECAST', 'OUTLOOK', 'UPDATE'
         ];
         
         const upperSentence = sentence.toUpperCase();
@@ -234,6 +242,42 @@ class Discussion {
             upperSentence.startsWith(keyword) || 
             upperSentence.startsWith(keyword + '...')
         );
+    }
+
+    /**
+     * Force paragraph breaks for very long text blocks
+     * @param {string} text - Long text block
+     * @returns {Array<string>} Array of paragraph strings
+     */
+    forceParagraphBreaks(text) {
+        const sentences = text.split(/\.\s+/);
+        const paragraphs = [];
+        let currentParagraph = '';
+        
+        for (let i = 0; i < sentences.length; i++) {
+            let sentence = sentences[i].trim();
+            if (!sentence) continue;
+            
+            // Add period back unless it's the last sentence
+            if (i < sentences.length - 1) {
+                sentence += '.';
+            }
+            
+            // Start new paragraph every 2-3 sentences for long discussions
+            if (currentParagraph && currentParagraph.split(/\.\s+/).length >= 2) {
+                paragraphs.push(currentParagraph.trim());
+                currentParagraph = sentence;
+            } else {
+                currentParagraph += (currentParagraph ? ' ' : '') + sentence;
+            }
+        }
+        
+        // Add remaining content
+        if (currentParagraph.trim()) {
+            paragraphs.push(currentParagraph.trim());
+        }
+        
+        return paragraphs;
     }
 
     /**
@@ -255,7 +299,11 @@ class Discussion {
                 sentence += '.';
             }
             
-            if (currentChunk && (currentChunk + ' ' + sentence).length > 400) {
+            // Break on length or logical weather discussion boundaries
+            if (currentChunk && (
+                (currentChunk + ' ' + sentence).length > 350 ||
+                this.shouldStartNewParagraph(sentence, currentChunk)
+            )) {
                 chunks.push(currentChunk.trim());
                 currentChunk = sentence;
             } else {

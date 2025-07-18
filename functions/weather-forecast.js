@@ -95,7 +95,7 @@ async function fetchAllWarnings() {
           content: text.trim(),
           timestamp: timestamp,
           updated: new Date().toISOString(),
-          hasContent: text.trim().length > 100 // Only show if there's substantial content
+          hasContent: text.trim().length > 50 // Show warnings with meaningful content
         };
       } else {
         console.log(`Failed to fetch ${name}: ${response.status}`);
@@ -141,83 +141,7 @@ function extractTimestamp(text) {
   return null;
 }
 
-function extractZoneForecastFromHTML(html, zoneId) {
-  try {
-    // Look for zone-specific forecast in the HTML
-    // The weather.gov page has forecasts organized by zone ID
-
-    // Look for the zone ID followed by forecast content
-    const zonePattern = new RegExp(`${zoneId}[\\s\\S]*?(?=AKZ\\d{3}|$)`, 'i');
-    let zoneSection = html.match(zonePattern);
-
-    if (!zoneSection) {
-      // Try alternative pattern - look for zone name
-      const zoneName = ZONE_NAMES[zoneId];
-      if (zoneName) {
-        const namePattern = new RegExp(`${zoneName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=AKZ\\d{3}|$)`, 'i');
-        zoneSection = html.match(namePattern);
-      }
-    }
-
-    let text = zoneSection ? zoneSection[0] : html;
-
-    // Remove HTML tags and scripts
-    text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-    text = text.replace(/<[^>]*>/g, ' ');
-
-    // Decode HTML entities
-    text = text.replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"');
-
-    // Clean up whitespace
-    text = text.replace(/\s+/g, ' ').trim();
-
-    // Look for forecast content patterns
-    const forecastPatterns = [
-      /\.{2,}TODAY\.{2,}.*?(?=\.{2,}TONIGHT\.{2,}|\.{2,}[A-Z]+\.{2,}|$)/gi,
-      /\.{2,}TONIGHT\.{2,}.*?(?=\.{2,}[A-Z]+\.{2,}|$)/gi,
-      /\.{2,}WEDNESDAY\.{2,}.*?(?=\.{2,}[A-Z]+\.{2,}|$)/gi,
-      /\.{2,}THURSDAY\.{2,}.*?(?=\.{2,}[A-Z]+\.{2,}|$)/gi,
-      /\.{2,}FRIDAY\.{2,}.*?(?=\.{2,}[A-Z]+\.{2,}|$)/gi
-    ];
-
-    let extractedText = '';
-
-    for (const pattern of forecastPatterns) {
-      const matches = text.match(pattern);
-      if (matches) {
-        extractedText += matches.join(' ').replace(/\.{2,}/g, ' ').trim() + '\n\n';
-      }
-    }
-
-    // If we found forecast content, clean it up and return
-    if (extractedText.trim() && extractedText.length > 30) {
-      return extractedText.trim().substring(0, 800);
-    }
-
-    // Fallback: extract any meaningful weather content
-    const lines = text.split(/\s+/).filter(line => line.trim().length > 3);
-    const weatherWords = ['temperature', 'wind', 'sky', 'rain', 'snow', 'cloud', 'clear', 'sunny', 'overcast', 'mph', 'degrees'];
-    const weatherLines = lines.filter(line =>
-      weatherWords.some(word => line.toLowerCase().includes(word))
-    );
-
-    if (weatherLines.length > 5) {
-      return weatherLines.slice(0, 20).join(' ').substring(0, 500);
-    }
-
-    // Final fallback
-    return `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Current conditions and detailed forecasts available at weather.gov.`;
-
-  } catch (error) {
-    console.error('Error extracting zone forecast:', error);
-    return `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Please visit weather.gov for current conditions.`;
-  }
-}
+// Remove this unused function - it's not needed for weather warnings
 
 exports.handler = async (event, context) => {
   console.log('Weather warnings function called with:', {
