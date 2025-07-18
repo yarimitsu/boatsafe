@@ -79,6 +79,9 @@ class BoatSafeApp {
             weather: new WeatherWidget()
         };
         
+        // Store weather widget instance for retry functionality
+        WeatherWidget.instance = this.widgets.weather;
+        
         console.log('UI components initialized');
     }
 

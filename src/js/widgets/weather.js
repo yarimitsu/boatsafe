@@ -1,16 +1,12 @@
 /**
- * Weather Forecast Widget
- * Displays current weather forecast for Alaska weather zones (AKZ317-AKZ332)
+ * Weather Warnings Widget
+ * Displays weather warnings and advisories from NOAA Juneau office
  */
 class WeatherWidget {
     constructor() {
         this.container = document.getElementById('weather');
         this.content = this.container.querySelector('.weather-content');
-        this.zoneDropdown = document.getElementById('weather-location-dropdown');
-        this.weatherDisplay = this.container.querySelector('.weather-data-container');
         this.currentData = null;
-        this.selectedZone = null;
-        this.zones = null; // Will be loaded from zones.json
         
         this.init();
     }
@@ -20,208 +16,219 @@ class WeatherWidget {
      */
     init() {
         this.showLoading();
-        this.loadZones();
-        this.setupEventListeners();
-    }
-
-    /**
-     * Load zones data and populate dropdown
-     */
-    async loadZones() {
-        try {
-            const response = await window.BoatSafe.http.get('./data/zones.json', { cacheTTL: 1440 });
-            const zonesData = typeof response === 'string' ? JSON.parse(response) : response;
-            
-            if (zonesData.weather_zones && zonesData.weather_zones.zones) {
-                this.zones = zonesData.weather_zones.zones;
-                this.populateZoneDropdown();
-                this.restoreSelection();
-            } else {
-                console.error('Weather zones not found in zones.json');
-                this.showError('Weather zones configuration not found');
-            }
-        } catch (error) {
-            console.error('Failed to load weather zones:', error);
-            this.showError('Failed to load weather zones configuration');
-        }
-    }
-
-    /**
-     * Populate zone dropdown with Alaska weather zones
-     */
-    populateZoneDropdown() {
-        if (!this.zoneDropdown || !this.zones) return;
-
-        // Clear existing options except the first one
-        this.zoneDropdown.innerHTML = '<option value="">Select a location...</option>';
+        this.loadWarnings();
         
-        // Add all Alaska weather zones
-        Object.entries(this.zones).forEach(([zoneId, zoneName]) => {
-            const option = document.createElement('option');
-            option.value = zoneId;
-            option.textContent = `${zoneId} - ${zoneName}`;
-            this.zoneDropdown.appendChild(option);
-        });
+        // Auto-refresh every 15 minutes
+        setInterval(() => {
+            this.loadWarnings();
+        }, 15 * 60 * 1000);
     }
 
     /**
-     * Set up event listeners
+     * Load weather warnings from Netlify function
      */
-    setupEventListeners() {
-        if (this.zoneDropdown) {
-            this.zoneDropdown.addEventListener('change', (e) => {
-                const zoneId = e.target.value;
-                this.selectZone(zoneId);
-            });
-        }
-    }
-
-    /**
-     * Restore previous selection from localStorage
-     */
-    restoreSelection() {
+    async loadWarnings() {
         try {
-            const savedZone = localStorage.getItem('boatsafe_weather_zone');
-            if (savedZone && this.zones[savedZone]) {
-                this.zoneDropdown.value = savedZone;
-                this.selectZone(savedZone);
-            }
-        } catch (error) {
-            console.warn('Failed to restore weather zone preference:', error);
-        }
-    }
-
-    /**
-     * Select and display specific zone weather
-     * @param {string} zoneId - Zone ID to display
-     */
-    async selectZone(zoneId) {
-        if (!zoneId) {
-            this.showLoading('Select a location to view weather forecast');
-            return;
-        }
-
-        if (!this.zones[zoneId]) {
-            this.showError(`Invalid zone: ${zoneId}`);
-            return;
-        }
-
-        this.selectedZone = zoneId;
-        this.showLoading(`Loading weather forecast for ${this.zones[zoneId]}...`);
-        
-        try {
-            // Fetch weather data for this specific zone
             const currentHost = window.location.origin;
             const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
             
-            let data;
             if (isLocal) {
-                // Local development - no fake data
-                throw new Error('Weather data not available in development mode. Deploy to production to see live weather forecasts.');
-            } else {
-                // Production - use Netlify function (same pattern as other widgets)
-                const proxyUrl = `${currentHost}/.netlify/functions/weather-forecast/${zoneId}`;
-                console.log(`Fetching weather for ${zoneId} from:`, proxyUrl);
-                data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30 });
+                // Local development - show placeholder
+                this.showLocalDevelopmentMessage();
+                return;
             }
+
+            // Production - use Netlify function
+            const proxyUrl = `${currentHost}/.netlify/functions/weather-forecast`;
+            console.log('Fetching weather warnings from:', proxyUrl);
             
-            console.log('Received weather data:', data);
+            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 15 }); // 15 minutes cache
             
-            if (data.properties && data.properties.periods) {
+            console.log('Received weather warnings data:', data);
+            
+            if (data.warnings) {
                 this.currentData = data;
-                this.renderWeatherForecast();
-                
-                // Save zone preference
-                try {
-                    localStorage.setItem('boatsafe_weather_zone', zoneId);
-                } catch (error) {
-                    console.warn('Failed to save weather zone preference:', error);
-                }
+                this.renderWarnings();
             } else {
-                throw new Error('No weather data received - invalid response structure');
+                throw new Error('No warnings data received - invalid response structure');
             }
         } catch (error) {
-            console.error('Failed to load weather forecast:', error);
-            console.error('Error details:', error.message);
-            this.showError(`Failed to load weather forecast for ${this.zones[zoneId]}: ${error.message}`);
+            console.error('Failed to load weather warnings:', error);
+            this.showError(`Failed to load weather warnings: ${error.message}`);
         }
     }
 
     /**
-     * Render weather forecast data
+     * Render weather warnings in separate boxes
      */
-    renderWeatherForecast() {
-        if (!this.currentData || !this.currentData.properties) {
-            this.showError('No weather data available');
+    renderWarnings() {
+        if (!this.currentData || !this.currentData.warnings) {
+            this.showError('No weather warnings data available');
             return;
         }
 
-        const { properties } = this.currentData;
-        const { zone, zoneName, updated, periods } = properties;
+        const { warnings, updated, officeName } = this.currentData;
         
-        if (!periods || periods.length === 0) {
-            this.showError('No weather forecast periods available');
-            return;
-        }
-
-        const forecastText = periods[0].detailedForecast;
-        const displayName = zoneName || this.zones[zone] || zone;
-        
-        // Clean up and format forecast text
-        const cleanForecast = this.formatForecastText(forecastText);
-        
-        const html = `
-            <div class="forecast-period">
-                <div class="period-header">
-                    <div class="forecast-title">
-                        <strong>${displayName}</strong>
-                        <span class="zone-id">${zone}</span>
-                    </div>
-                    <div class="forecast-time">
-                        <span class="period-time">Updated: ${this.formatDate(new Date(updated))}</span>
-                    </div>
+        // Create header
+        const headerHtml = `
+            <div class="warnings-header">
+                <div class="office-info">
+                    <strong>${officeName}</strong>
+                    <span class="last-updated">Last updated: ${this.formatDate(new Date(updated))}</span>
                 </div>
-                <div class="forecast-text">
-                    ${cleanForecast}
-                </div>
-                <div class="weather-link">
-                    <a href="https://www.weather.gov/arh/lfpfcst.html?AJK=${zone}" target="_blank" rel="noopener">
-                        View Full Forecast →
-                    </a>
+                <div class="refresh-info">
+                    <small>Auto-refreshes every 15 minutes</small>
                 </div>
             </div>
         `;
 
-        this.weatherDisplay.innerHTML = html;
+        // Create warning boxes
+        const warningBoxes = Object.entries(warnings).map(([code, warning]) => {
+            return this.renderWarningBox(code, warning);
+        }).join('');
+
+        const html = headerHtml + '<div class="warnings-grid">' + warningBoxes + '</div>';
+        
+        this.content.innerHTML = html;
     }
 
     /**
-     * Format and clean forecast text
-     * @param {string} text - Raw forecast text
-     * @returns {string} Formatted text
+     * Render individual warning box
+     * @param {string} code - Warning code (NPW, WSW, etc.)
+     * @param {Object} warning - Warning data
+     * @returns {string} HTML string
      */
-    formatForecastText(text) {
-        if (!text) return 'No forecast available';
+    renderWarningBox(code, warning) {
+        const { name, content, timestamp, hasContent } = warning;
         
-        // Remove HTML tags if any
-        let cleaned = text.replace(/<[^>]*>/g, '');
+        // Determine box status
+        const status = hasContent ? 'active' : 'inactive';
+        const statusText = hasContent ? 'ACTIVE' : 'No current warnings';
         
-        // Clean up extra whitespace
-        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+        // Clean and format content
+        const displayContent = hasContent ? this.formatWarningContent(content) : `No ${name.toLowerCase()} currently active.`;
         
-        // Split into lines for better readability
-        const lines = cleaned.split(/\.\s+/);
+        // Extract key information for summary
+        const summary = hasContent ? this.extractWarningSummary(content) : null;
         
-        // Rejoin with proper punctuation and line breaks
-        return lines
+        return `
+            <div class="warning-box ${status}">
+                <div class="warning-header">
+                    <div class="warning-title">
+                        <strong>${name}</strong>
+                        <span class="warning-code">${code}</span>
+                    </div>
+                    <div class="warning-status ${status}">
+                        ${statusText}
+                    </div>
+                </div>
+                
+                ${timestamp ? `
+                    <div class="warning-timestamp">
+                        <strong>Issued:</strong> ${timestamp}
+                    </div>
+                ` : ''}
+                
+                ${summary ? `
+                    <div class="warning-summary">
+                        ${summary}
+                    </div>
+                ` : ''}
+                
+                <div class="warning-content ${hasContent ? 'expandable' : ''}">
+                    <div class="content-text">
+                        ${displayContent}
+                    </div>
+                    ${hasContent ? `
+                        <button class="expand-btn" onclick="this.parentElement.classList.toggle('expanded')">
+                            <span class="expand-text">Show Full Text</span>
+                            <span class="collapse-text">Show Less</span>
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div class="warning-link">
+                    <a href="https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=${code}&format=txt&version=1&glossary=0" 
+                       target="_blank" rel="noopener">
+                        View on NOAA Website →
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Format warning content for display
+     * @param {string} content - Raw warning content
+     * @returns {string} Formatted content
+     */
+    formatWarningContent(content) {
+        if (!content) return 'No content available';
+        
+        // Clean up the content
+        let formatted = content
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        
+        // Convert to HTML with proper line breaks
+        formatted = formatted
+            .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0)
-            .map(line => line.endsWith('.') ? line : line + '.')
-            .join('\n\n');
+            .join('<br>');
+        
+        return formatted;
     }
 
     /**
-     * Format date for display (matches discussion widget style)
+     * Extract warning summary from content
+     * @param {string} content - Warning content
+     * @returns {string|null} Summary text
+     */
+    extractWarningSummary(content) {
+        if (!content) return null;
+        
+        // Look for common warning patterns
+        const summaryPatterns = [
+            /URGENT - WEATHER MESSAGE/i,
+            /\.\.\.([^.]+ADVISORY[^.]*)\.\.\./i,
+            /\.\.\.([^.]+WARNING[^.]*)\.\.\./i,
+            /\.\.\.([^.]+WATCH[^.]*)\.\.\./i,
+            /WHAT\.\.\.([^.]+)/i,
+            /WHERE\.\.\.([^.]+)/i,
+            /WHEN\.\.\.([^.]+)/i
+        ];
+        
+        for (const pattern of summaryPatterns) {
+            const match = content.match(pattern);
+            if (match) {
+                let summary = match[1] || match[0];
+                // Clean up and limit length
+                summary = summary.replace(/\s+/g, ' ').trim();
+                if (summary.length > 150) {
+                    summary = summary.substring(0, 147) + '...';
+                }
+                return summary;
+            }
+        }
+        
+        // Fallback: use first meaningful line
+        const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 10);
+        if (lines.length > 0) {
+            let summary = lines[0];
+            if (summary.length > 150) {
+                summary = summary.substring(0, 147) + '...';
+            }
+            return summary;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Format date for display
      * @param {Date} date - Date object
      * @returns {string} Formatted date string
      */
@@ -233,7 +240,8 @@ class WeatherWidget {
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZoneName: 'short'
             });
         } catch (error) {
             return 'Unknown';
@@ -244,8 +252,8 @@ class WeatherWidget {
      * Show loading state
      * @param {string} message - Loading message
      */
-    showLoading(message = 'Loading weather forecast...') {
-        this.weatherDisplay.innerHTML = `<div class="loading">${message}</div>`;
+    showLoading(message = 'Loading weather warnings...') {
+        this.content.innerHTML = `<div class="loading">${message}</div>`;
     }
 
     /**
@@ -253,9 +261,35 @@ class WeatherWidget {
      * @param {string} message - Error message
      */
     showError(message) {
-        this.weatherDisplay.innerHTML = `
+        this.content.innerHTML = `
             <div class="status-message status-error">
                 <strong>Error:</strong> ${message}
+                <br><br>
+                <button onclick="window.WeatherWidget.instance.loadWarnings()" class="retry-btn">
+                    Retry Loading
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Show local development message
+     */
+    showLocalDevelopmentMessage() {
+        this.content.innerHTML = `
+            <div class="status-message status-info">
+                <strong>Local Development Mode</strong>
+                <p>Weather warnings will be displayed when deployed to production.</p>
+                <p>The widget will show boxes for:</p>
+                <ul>
+                    <li>Non-Precipitation Warnings</li>
+                    <li>Winter Storm Warnings</li>
+                    <li>Weather Conditions</li>
+                    <li>Special Weather Statements</li>
+                    <li>Hazardous Weather Outlook</li>
+                    <li>Area Forecast Discussion</li>
+                    <li>Short Term Forecast</li>
+                </ul>
             </div>
         `;
     }
@@ -265,54 +299,52 @@ class WeatherWidget {
      */
     clear() {
         this.currentData = null;
-        this.selectedZone = null;
-        if (this.zoneDropdown) {
-            this.zoneDropdown.value = '';
-        }
-        this.showLoading('Select a location to view weather forecast');
+        this.showLoading('Loading weather warnings...');
     }
 
     /**
-     * Get current weather data
-     * @returns {Object|null} Current weather data
+     * Get current warnings data
+     * @returns {Object|null} Current warnings data
      */
     getData() {
         return this.currentData;
     }
 
     /**
-     * Export weather data as text
+     * Export warnings data as text
      * @returns {string} Text representation
      */
     exportAsText() {
         if (!this.currentData) return '';
         
-        const { properties } = this.currentData;
-        const { zone, zoneName, updated, periods } = properties;
+        const { warnings, updated, officeName } = this.currentData;
         
-        let text = `Weather Forecast for ${zoneName || zone}\n`;
-        text += `Zone: ${zone}\n`;
+        let text = `Weather Warnings from ${officeName}\n`;
         text += `Updated: ${this.formatDate(new Date(updated))}\n\n`;
         
-        if (periods && periods.length > 0) {
-            text += `${periods[0].name}:\n`;
-            text += `${periods[0].detailedForecast}\n\n`;
-        }
+        Object.entries(warnings).forEach(([code, warning]) => {
+            text += `${warning.name} (${code}):\n`;
+            if (warning.timestamp) {
+                text += `Issued: ${warning.timestamp}\n`;
+            }
+            text += `${warning.content}\n\n`;
+            text += '---\n\n';
+        });
         
         return text;
     }
 
     /**
-     * Refresh current selection
+     * Refresh warnings
      */
     refresh() {
-        if (this.selectedZone) {
-            this.selectZone(this.selectedZone);
-        }
+        this.loadWarnings();
     }
 }
 
-// Export for use in other modules
+// Create global instance
 if (typeof window !== 'undefined') {
     window.WeatherWidget = WeatherWidget;
+    // Store instance for retry button
+    WeatherWidget.instance = null;
 }

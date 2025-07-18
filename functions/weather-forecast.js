@@ -1,43 +1,38 @@
 /**
- * Netlify Function: Weather Forecast Proxy
- * Security-first proxy for NOAA Weather Forecast API
+ * Netlify Function: Weather Warnings and Advisories Proxy
+ * Security-first proxy for NOAA Weather Warnings from Juneau office
  */
 
-// Valid Alaska weather zones - security whitelist
-const VALID_ZONES = new Set([
-  'AKZ317', 'AKZ318', 'AKZ319', 'AKZ320', 'AKZ321', 'AKZ322', 'AKZ323', 'AKZ324',
-  'AKZ325', 'AKZ326', 'AKZ327', 'AKZ328', 'AKZ329', 'AKZ330', 'AKZ331', 'AKZ332'
+// Valid warning types from NOAA Juneau office
+const VALID_WARNING_TYPES = new Set([
+  'NPW', // Non-Precipitation Warnings
+  'WSW', // Winter Storm Warnings
+  'WCN', // Weather Conditions
+  'SPS', // Special Weather Statements
+  'HWO', // Hazardous Weather Outlook
+  'AFD', // Area Forecast Discussion
+  'NOW'  // Short Term Forecast
 ]);
 
-// Zone name mapping (Southeast Alaska)
-const ZONE_NAMES = {
-  'AKZ317': 'City and Borough of Yakutat',
-  'AKZ318': 'Municipality of Skagway',
-  'AKZ319': 'Haines Borough and Klukwan',
-  'AKZ320': 'Glacier Bay',
-  'AKZ321': 'Eastern Chichagof Island',
-  'AKZ322': 'Cape Fairweather to Lisianski Strait',
-  'AKZ323': 'City and Borough of Sitka',
-  'AKZ324': 'Admiralty Island',
-  'AKZ325': 'City and Borough of Juneau',
-  'AKZ326': 'Petersburg Borough',
-  'AKZ327': 'Western Kupreanof and Kuiu Island',
-  'AKZ328': 'Prince of Wales Island',
-  'AKZ329': 'City and Borough of Wrangell',
-  'AKZ330': 'Ketchikan Gateway Borough',
-  'AKZ331': 'City of Hyder',
-  'AKZ332': 'Annette Island'
+// Warning type descriptions
+const WARNING_TYPES = {
+  'NPW': 'Non-Precipitation Warnings',
+  'WSW': 'Winter Storm Warnings', 
+  'WCN': 'Weather Conditions',
+  'SPS': 'Special Weather Statements',
+  'HWO': 'Hazardous Weather Outlook',
+  'AFD': 'Area Forecast Discussion',
+  'NOW': 'Short Term Forecast'
 };
 
 // Rate limiting store (in-memory)
 const rateLimitStore = new Map();
 
-function validateZoneId(zoneId) {
-  if (!zoneId || typeof zoneId !== 'string') {
+function validateWarningType(warningType) {
+  if (!warningType || typeof warningType !== 'string') {
     return false;
   }
-
-  return VALID_ZONES.has(zoneId.toUpperCase());
+  return VALID_WARNING_TYPES.has(warningType.toUpperCase());
 }
 
 function checkRateLimit(ip) {
@@ -72,110 +67,78 @@ function getClientIp(event) {
     '127.0.0.1';
 }
 
-async function fetchWeatherData(zoneId) {
-  // Use NOAA text forecast files (similar to marine forecast approach)
-  const textUrl = `https://tgftp.nws.noaa.gov/data/forecasts/zone/ak/${zoneId.toLowerCase()}.txt`;
+async function fetchAllWarnings() {
+  const warnings = {};
   
-  try {
-    console.log(`Fetching weather forecast from NOAA text file: ${textUrl}`);
-    const response = await fetch(textUrl, {
-      headers: {
-        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
-        'Accept': 'text/plain'
-      }
-    });
-    
-    console.log(`Response status: ${response.status}`);
-    
-    if (response.ok) {
-      const text = await response.text();
-      console.log(`Got text forecast for ${zoneId}, length: ${text.length}`);
+  // Fetch all warning types
+  for (const [code, name] of Object.entries(WARNING_TYPES)) {
+    try {
+      const url = `https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=${code}&format=txt&version=1&glossary=0`;
+      console.log(`Fetching ${name} from: ${url}`);
       
-      // Extract issued time from forecast text
-      let issuedTime = null;
-      const issuedMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i) ||
-                         text.match(/ISSUED.*?(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST).*?)/i);
-      if (issuedMatch) {
-        issuedTime = issuedMatch[1] || issuedMatch[0];
-      }
-      
-      return {
-        properties: {
-          updated: new Date().toISOString(),
-          issued: issuedTime || new Date().toISOString(),
-          zone: zoneId,
-          zoneName: ZONE_NAMES[zoneId] || zoneId,
-          periods: [{
-            name: 'Weather Forecast',
-            detailedForecast: text.trim(),
-            shortForecast: `${ZONE_NAMES[zoneId] || zoneId} conditions`,
-            issueTime: issuedTime
-          }]
-        }
-      };
-    } else {
-      console.log(`Text forecast failed ${response.status}: ${response.statusText}`);
-      
-      // Fallback: try the NOAA API
-      const apiUrl = `https://api.weather.gov/zones/forecast/${zoneId}/forecast`;
-      console.log(`Trying NOAA API: ${apiUrl}`);
-      
-      const apiResponse = await fetch(apiUrl, {
+      const response = await fetch(url, {
         headers: {
           'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
-          'Accept': 'application/json'
+          'Accept': 'text/plain'
         }
       });
       
-      if (apiResponse.ok) {
-        const data = await apiResponse.json();
-        console.log(`Got API data for ${zoneId}:`, data);
+      if (response.ok) {
+        const text = await response.text();
+        console.log(`Got ${name}, length: ${text.length}`);
         
-        return {
-          properties: {
-            updated: data.properties?.updated || new Date().toISOString(),
-            zone: zoneId,
-            zoneName: ZONE_NAMES[zoneId] || zoneId,
-            periods: data.properties?.periods || [{
-              name: 'Weather Forecast',
-              detailedForecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Visit weather.gov for current conditions.`,
-              shortForecast: `${ZONE_NAMES[zoneId] || zoneId} conditions`
-            }]
-          }
+        // Extract timestamp from the warning text
+        const timestamp = extractTimestamp(text);
+        
+        warnings[code] = {
+          name: name,
+          content: text.trim(),
+          timestamp: timestamp,
+          updated: new Date().toISOString(),
+          hasContent: text.trim().length > 100 // Only show if there's substantial content
+        };
+      } else {
+        console.log(`Failed to fetch ${name}: ${response.status}`);
+        warnings[code] = {
+          name: name,
+          content: `No ${name.toLowerCase()} currently active.`,
+          timestamp: null,
+          updated: new Date().toISOString(),
+          hasContent: false
         };
       }
-      
-      // Final fallback
-      return {
-        properties: {
-          updated: new Date().toISOString(),
-          zone: zoneId,
-          zoneName: ZONE_NAMES[zoneId] || zoneId,
-          periods: [{
-            name: 'Weather Forecast',
-            detailedForecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Visit weather.gov for current conditions and detailed forecasts.`,
-            shortForecast: `${ZONE_NAMES[zoneId] || zoneId} conditions`
-          }]
-        }
+    } catch (error) {
+      console.error(`Error fetching ${name}:`, error);
+      warnings[code] = {
+        name: name,
+        content: `Error loading ${name.toLowerCase()}.`,
+        timestamp: null,
+        updated: new Date().toISOString(),
+        hasContent: false
       };
     }
-  } catch (error) {
-    console.error(`Failed to fetch weather data:`, error.message);
-    
-    // Return fallback data instead of throwing
-    return {
-      properties: {
-        updated: new Date().toISOString(),
-        zone: zoneId,
-        zoneName: ZONE_NAMES[zoneId] || zoneId,
-        periods: [{
-          name: 'Weather Forecast',
-          detailedForecast: `Weather forecast for ${ZONE_NAMES[zoneId] || zoneId}. Visit weather.gov for current conditions.`,
-          shortForecast: `${ZONE_NAMES[zoneId] || zoneId} conditions`
-        }]
-      }
-    };
   }
+  
+  return warnings;
+}
+
+function extractTimestamp(text) {
+  // Look for various timestamp patterns in NOAA warnings
+  const patterns = [
+    /(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST)\s*\w+\s*\w+\s*\d{1,2}\s*\d{4})/i,
+    /(\d{3,4}\s*(AM|PM)\s*(AKDT|AKST)\s*\w+\s*\w+\s*\d{1,2}\s*\d{4})/i,
+    /National Weather Service.*?(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST).*?\d{4})/i,
+    /(\w+\s*\w+\s*\d{1,2}\s*\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[1] || match[0];
+    }
+  }
+  
+  return null;
 }
 
 function extractZoneForecastFromHTML(html, zoneId) {
@@ -257,7 +220,7 @@ function extractZoneForecastFromHTML(html, zoneId) {
 }
 
 exports.handler = async (event, context) => {
-  console.log('Weather forecast function called with:', {
+  console.log('Weather warnings function called with:', {
     method: event.httpMethod,
     path: event.path,
     headers: event.headers
@@ -307,58 +270,27 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Extract zone ID from path
-    console.log('Extracting zone ID from path:', event.path);
-    const pathMatch = event.path.match(/\/weather-forecast\/([^\/]+)/);
-    if (!pathMatch) {
-      console.log('No zone ID found in path');
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          error: 'Invalid request',
-          message: 'Zone ID is required in path: /weather-forecast/{zoneId}',
-          path: event.path
-        })
-      };
-    }
-
-    const zoneId = pathMatch[1].toUpperCase();
-    console.log('Extracted zone ID:', zoneId);
-
-    // Validate zone ID
-    if (!validateZoneId(zoneId)) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          error: 'Invalid zone ID',
-          message: 'Zone ID must be a valid Alaska weather zone (AKZ317-AKZ332)'
-        })
-      };
-    }
-
-    // Fetch data from NOAA
-    const data = await fetchWeatherData(zoneId);
+    // Fetch all weather warnings from NOAA Juneau office
+    console.log('Fetching all weather warnings from NOAA Juneau office');
+    const warnings = await fetchAllWarnings();
 
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=1800' // 30 minutes
+        'Cache-Control': 'public, max-age=900' // 15 minutes (warnings change more frequently)
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        warnings: warnings,
+        updated: new Date().toISOString(),
+        office: 'AJK',
+        officeName: 'NOAA Weather Service Juneau'
+      })
     };
 
   } catch (error) {
-    console.error('Weather forecast proxy error:', error);
+    console.error('Weather warnings proxy error:', error);
 
     return {
       statusCode: 500,
@@ -368,7 +300,7 @@ exports.handler = async (event, context) => {
       },
       body: JSON.stringify({
         error: 'Internal server error',
-        message: 'Unable to fetch weather forecast data'
+        message: 'Unable to fetch weather warnings data'
       })
     };
   }

@@ -1254,3 +1254,236 @@
         min-width: 32px;
     }
 }
+
+/* Weather Warnings Widget Styles */
+.warnings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-4);
+    padding: var(--spacing-3);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--warning-orange);
+}
+
+.office-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+}
+
+.last-updated {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.refresh-info {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.warnings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--spacing-4);
+}
+
+.warning-box {
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(15, 37, 53, 0.4);
+    backdrop-filter: blur(5px);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.warning-box.active {
+    border-left: 4px solid var(--error-red);
+    background-color: rgba(220, 38, 38, 0.1);
+}
+
+.warning-box.inactive {
+    border-left: 4px solid var(--gray-500);
+    background-color: rgba(15, 37, 53, 0.2);
+}
+
+.warning-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3);
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: var(--border-width) solid var(--glass-border);
+}
+
+.warning-title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+}
+
+.warning-code {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.warning-status {
+    padding: var(--spacing-1) var(--spacing-2);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.warning-status.active {
+    background-color: var(--error-red);
+    color: white;
+}
+
+.warning-status.inactive {
+    background-color: var(--gray-500);
+    color: white;
+}
+
+.warning-timestamp {
+    padding: var(--spacing-2) var(--spacing-3);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.warning-summary {
+    padding: var(--spacing-2) var(--spacing-3);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: var(--font-size-sm);
+    color: var(--primary-light);
+    font-weight: 500;
+    border-left: 2px solid var(--accent-teal);
+}
+
+.warning-content {
+    padding: var(--spacing-3);
+}
+
+.warning-content.expandable {
+    position: relative;
+}
+
+.content-text {
+    line-height: 1.6;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    max-height: 150px;
+    overflow: hidden;
+    transition: max-height var(--transition-fast);
+}
+
+.warning-content.expanded .content-text {
+    max-height: none;
+    overflow: visible;
+}
+
+.expand-btn {
+    background: none;
+    border: var(--border-width) solid var(--glass-border);
+    color: var(--primary-light);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-2);
+    width: 100%;
+    transition: all var(--transition-fast);
+    backdrop-filter: blur(5px);
+}
+
+.expand-btn:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--button-text-dark);
+}
+
+.expand-btn .collapse-text {
+    display: none;
+}
+
+.warning-content.expanded .expand-btn .expand-text {
+    display: none;
+}
+
+.warning-content.expanded .expand-btn .collapse-text {
+    display: inline;
+}
+
+.warning-link {
+    padding: var(--spacing-2) var(--spacing-3);
+    background: rgba(255, 255, 255, 0.03);
+    text-align: center;
+    border-top: var(--border-width) solid var(--glass-border);
+}
+
+.warning-link a {
+    color: var(--accent-teal);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.warning-link a:hover {
+    color: var(--primary-light);
+    text-decoration: underline;
+}
+
+.retry-btn {
+    background: var(--primary-color);
+    border: none;
+    color: var(--button-text-dark);
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.retry-btn:hover {
+    background-color: var(--accent-color);
+    box-shadow: 0 0 10px var(--ice-glow);
+}
+
+/* Mobile responsiveness for weather warnings */
+@media (max-width: 768px) {
+    .warnings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .warnings-header {
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+    
+    .refresh-info {
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .warning-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-2);
+    }
+    
+    .content-text {
+        font-size: var(--font-size-xs);
+        max-height: 100px;
+    }
+    
+    .expand-btn {
+        padding: var(--spacing-1) var(--spacing-2);
+        font-size: var(--font-size-xs);
+    }
+}
