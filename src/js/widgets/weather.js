@@ -10,26 +10,7 @@ class WeatherWidget {
         this.weatherDisplay = this.container.querySelector('.weather-data-container');
         this.currentData = null;
         this.selectedZone = null;
-        
-        // Alaska weather zones mapping (Southeast Alaska)
-        this.zones = {
-            'AKZ317': 'City and Borough of Yakutat',
-            'AKZ318': 'Municipality of Skagway',
-            'AKZ319': 'Haines Borough and Klukwan',
-            'AKZ320': 'Glacier Bay',
-            'AKZ321': 'Eastern Chichagof Island',
-            'AKZ322': 'Cape Fairweather to Lisianski Strait',
-            'AKZ323': 'City and Borough of Sitka',
-            'AKZ324': 'Admiralty Island',
-            'AKZ325': 'City and Borough of Juneau',
-            'AKZ326': 'Petersburg Borough',
-            'AKZ327': 'Western Kupreanof and Kuiu Island',
-            'AKZ328': 'Prince of Wales Island',
-            'AKZ329': 'City and Borough of Wrangell',
-            'AKZ330': 'Ketchikan Gateway Borough',
-            'AKZ331': 'City of Hyder',
-            'AKZ332': 'Annette Island'
-        };
+        this.zones = null; // Will be loaded from zones.json
         
         this.init();
     }
@@ -39,16 +20,37 @@ class WeatherWidget {
      */
     init() {
         this.showLoading();
-        this.populateZoneDropdown();
+        this.loadZones();
         this.setupEventListeners();
-        this.restoreSelection();
+    }
+
+    /**
+     * Load zones data and populate dropdown
+     */
+    async loadZones() {
+        try {
+            const response = await window.BoatSafe.http.get('./data/zones.json', { cacheTTL: 1440 });
+            const zonesData = typeof response === 'string' ? JSON.parse(response) : response;
+            
+            if (zonesData.weather_zones && zonesData.weather_zones.zones) {
+                this.zones = zonesData.weather_zones.zones;
+                this.populateZoneDropdown();
+                this.restoreSelection();
+            } else {
+                console.error('Weather zones not found in zones.json');
+                this.showError('Weather zones configuration not found');
+            }
+        } catch (error) {
+            console.error('Failed to load weather zones:', error);
+            this.showError('Failed to load weather zones configuration');
+        }
     }
 
     /**
      * Populate zone dropdown with Alaska weather zones
      */
     populateZoneDropdown() {
-        if (!this.zoneDropdown) return;
+        if (!this.zoneDropdown || !this.zones) return;
 
         // Clear existing options except the first one
         this.zoneDropdown.innerHTML = '<option value="">Select a location...</option>';
