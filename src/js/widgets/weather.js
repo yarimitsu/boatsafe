@@ -114,20 +114,8 @@ class WeatherWidget {
             
             let data;
             if (isLocal) {
-                // Local development - show placeholder
-                console.log(`Local dev: would fetch weather for ${zoneId}`);
-                data = {
-                    properties: {
-                        updated: new Date().toISOString(),
-                        zone: zoneId,
-                        zoneName: this.zones[zoneId],
-                        periods: [{
-                            name: 'Current Weather',
-                            detailedForecast: `LOCAL DEVELOPMENT MODE\n\nWeather forecast for ${this.zones[zoneId]} (${zoneId}) would appear here.\n\nDeploy to Netlify to see real weather data.`,
-                            shortForecast: `Local dev mode - ${zoneId}`
-                        }]
-                    }
-                };
+                // Local development - no fake data
+                throw new Error('Weather data not available in development mode. Deploy to production to see live weather forecasts.');
             } else {
                 // Production - use Netlify function
                 const proxyUrl = `${currentHost}/.netlify/functions/weather-forecast/${zoneId}`;

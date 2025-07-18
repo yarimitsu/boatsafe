@@ -132,7 +132,7 @@ class Observations {
                     this.render();
                 } catch (error) {
                     console.warn('Failed to fetch live data in development, showing placeholder:', error);
-                    this.showLocalDevPlaceholder(stationId);
+                    this.showLocalDevPlaceholder();
                 }
             } else {
                 // Production - fetch real data via Netlify function
@@ -287,48 +287,9 @@ class Observations {
 
     /**
      * Show local development placeholder
-     * @param {string} stationId - Station ID
      */
-    showLocalDevPlaceholder(stationId) {
-        const stationName = this.stations[stationId] || stationId;
-        
-        const html = `
-            <div class="station-data">
-                <div class="station-header">
-                    <strong>${stationId} - ${stationName}</strong>
-                    <div class="station-time">Local Development Mode</div>
-                </div>
-                <div class="observation-items">
-                    <div class="observation-item">
-                        <span class="label">Wind Speed:</span>
-                        <span class="value">-- kt</span>
-                    </div>
-                    <div class="observation-item">
-                        <span class="label">Wind Direction:</span>
-                        <span class="value">-- °</span>
-                    </div>
-                    <div class="observation-item">
-                        <span class="label">Wave Height:</span>
-                        <span class="value">-- m</span>
-                    </div>
-                    <div class="observation-item">
-                        <span class="label">Air Temperature:</span>
-                        <span class="value">-- °C</span>
-                    </div>
-                    <div class="observation-item">
-                        <span class="label">Pressure:</span>
-                        <span class="value">-- hPa</span>
-                    </div>
-                </div>
-                <div class="local-dev-note">
-                    <em>Deploy to Netlify to see real buoy data</em>
-                </div>
-            </div>
-        `;
-        
-        if (this.observationsDisplay) {
-            this.observationsDisplay.innerHTML = html;
-        }
+    showLocalDevPlaceholder() {
+        this.showError('Station data not available in development mode. Deploy to production to see live buoy observations.');
     }
 
     /**
@@ -400,10 +361,10 @@ class Observations {
             } else if (diffMinutes < 1440) {
                 return `${Math.floor(diffMinutes / 60)} hr ago`;
             } else {
-                return date.toLocaleDateString();
+                return new Date(date).toLocaleDateString();
             }
         } catch (error) {
-            return date.toLocaleDateString();
+            return new Date(date).toLocaleDateString();
         }
     }
 
