@@ -57,9 +57,11 @@ const jsFiles = [
   path.join(srcDir, 'js/widgets/location-selector.js'),
   path.join(srcDir, 'js/widgets/forecast-summary.js'),
   path.join(srcDir, 'js/widgets/discussion.js'),
-  path.join(srcDir, 'js/widgets/alerts.js'),
-  path.join(srcDir, 'js/widgets/tides.js'),
-  path.join(srcDir, 'js/widgets/observations.js'),
+  path.join(srcDir, 'js/widgets/weather.js'),
+  path.join(srcDir, 'js/widgets/seak-observations.js'),
+  path.join(srcDir, 'js/widgets/coastal-forecast.js'),
+  path.join(srcDir, 'js/widgets/tides-currents.js'),
+  path.join(srcDir, 'js/widgets/currents.js'),
   path.join(srcDir, 'js/app.js')
 ];
 
@@ -83,6 +85,9 @@ fs.mkdirSync(dataDir, { recursive: true });
 fs.copyFileSync(path.join(srcDir, 'data/zones.json'), path.join(dataDir, 'zones.json'));
 fs.copyFileSync(path.join(srcDir, 'data/endpoints.json'), path.join(dataDir, 'endpoints.json'));
 fs.copyFileSync(path.join(srcDir, 'data/tide-stations.json'), path.join(dataDir, 'tide-stations.json'));
+fs.copyFileSync(path.join(srcDir, 'data/seak-stations.json'), path.join(dataDir, 'seak-stations.json'));
+fs.copyFileSync(path.join(srcDir, 'data/current-stations.json'), path.join(dataDir, 'current-stations.json'));
+fs.copyFileSync(path.join(srcDir, 'data/coastal-stations.json'), path.join(dataDir, 'coastal-stations.json'));
 
 // Copy logo image
 fs.copyFileSync(path.join(srcDir, 'oceanbightlogo.png'), path.join(buildDir, 'oceanbightlogo.png'));
