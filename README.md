@@ -6,11 +6,11 @@ A simple marine weather application displaying NOAA data for Alaska coastal wate
 ## Features
 
 - **Marine Forecast** - NOAA marine forecasts by region and zone
-- **Buoy Observations** - Real-time data from NDBC stations  
-- **Tide Information** - Tide predictions with date navigation
-- **Forecast Discussion** - Meteorologist analysis and reasoning
-- **Weather Forecast** - Southeast Alaska weather zones
-- **Marine Alerts** - Current marine alerts and warnings
+- **SEAK Observations** - Southeast Alaska marine observations from 92+ stations
+- **Tides** - Tide predictions with date navigation for Alaska stations
+- **Forecast Discussion** - Collapsible meteorologist analysis for 3 Alaska regions
+- **Weather Warnings** - Current weather warnings and advisories
+- **Coastal Forecasts** - All 7 Alaska coastal forecast regions
 
 ## Quick Start
 

@@ -181,7 +181,7 @@ class TidesCurrents {
             const url = `/.netlify/functions/tide-data/${stationId}?date=${dateStr}`;
             
             const response = await window.BoatSafe.http.get(url, { cacheTTL: 30 });
-            this.tideData = response.data;
+            this.tideData = response.data.data; // Extract NOAA data from wrapper
             this.renderTideData(stationId, date);
         } catch (error) {
             console.error('Failed to load tide data:', error);
@@ -202,7 +202,7 @@ class TidesCurrents {
             const url = `/.netlify/functions/current-data/${stationId}?date=${dateStr}`;
             
             const response = await window.BoatSafe.http.get(url, { cacheTTL: 30 });
-            this.currentData = response.data;
+            this.currentData = response.data.data; // Extract NOAA data from wrapper
             this.renderCurrentData(stationId, date);
         } catch (error) {
             console.error('Failed to load current data:', error);
@@ -246,12 +246,24 @@ class TidesCurrents {
      * Render current data
      */
     renderCurrentData(stationId, date) {
-        if (!this.currentData || !this.currentData.current_predictions) {
+        if (!this.currentData) {
             this.showCurrentError('No current data available');
             return;
         }
 
-        const currentEvents = this.processCurrentData(this.currentData.current_predictions);
+        // Handle different possible property names from NOAA API
+        const predictions = this.currentData.current_predictions || 
+                           this.currentData.predictions || 
+                           this.currentData.currents_predictions ||
+                           [];
+
+        if (predictions.length === 0) {
+            console.log('Current data structure:', this.currentData);
+            this.showCurrentError('No current predictions found');
+            return;
+        }
+
+        const currentEvents = this.processCurrentData(predictions);
         
         if (currentEvents.length === 0) {
             this.showCurrentError('No current events found for this date');

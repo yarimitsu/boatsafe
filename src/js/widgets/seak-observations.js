@@ -330,6 +330,18 @@ class SEAKObservations {
      * Show local development placeholder
      */
     showLocalDevPlaceholder() {
+        // Populate dropdown with sample stations for local development
+        if (this.stationDropdown) {
+            this.stationDropdown.innerHTML = `
+                <option value="">Select a station...</option>
+                <option value="SITKA">Sitka</option>
+                <option value="JUNEAU">Juneau</option>
+                <option value="KETCHIKAN">Ketchikan</option>
+                <option value="PETERSBURG">Petersburg</option>
+                <option value="WRANGELL">Wrangell</option>
+            `;
+        }
+        
         const html = `
             <div class="forecast-period">
                 <div class="period-header">
