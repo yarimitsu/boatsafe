@@ -3,48 +3,60 @@
  * Security-first proxy for NOAA Tides & Currents API
  */
 
-// Valid Alaska tide stations - security whitelist (verified NOAA station IDs)
-const VALID_STATIONS = new Set([
-  // Southeast Alaska - verified stations
-  '9452210', // Juneau, AK
-  '9452400', // Skagway, Taiya Inlet, AK
-  '9450460', // Ketchikan, Tongass Narrows, AK
+// Dynamic loading of Alaska tide stations from comprehensive dataset
+let VALID_STATIONS = null;
+const fs = require('fs');
+const path = require('path');
+
+async function loadValidStations() {
+  if (VALID_STATIONS !== null) {
+    return VALID_STATIONS;
+  }
   
-  // Southcentral Alaska - verified stations
-  '9455920', // Anchorage, AK
-  '9455500', // Seward, AK
-  '9455760', // Nikiski, AK
-  '9454050', // Valdez, AK
-  '9454240', // Cordova, AK
-  '9453220', // Kodiak Island, AK
-  '9459450', // Homer, AK
-  
-  // Western Alaska - verified stations
-  '9462450', // Nikolski, AK
-  
-  // Additional validated Alaska stations
-  '9459881', // Seldovia
-  '9455090', // Whittier
-  '9465673', // Bethel
-  '9464212', // Nome
-  '9461380', // Adak
-  '9459123', // King Cove
-  '9497645', // Prudhoe Bay
-  '9491094', // Red Dog Dock
-  '9491253', // Kotzebue
-  '9468756', // St. Paul Island
-  '9468333', // St. George Island
-]);
+  try {
+    const stationsPath = path.join(__dirname, '../src/data/tide-stations.json');
+    const stationsData = JSON.parse(fs.readFileSync(stationsPath, 'utf8'));
+    
+    // Filter to Alaska stations only for security whitelist
+    VALID_STATIONS = new Set();
+    Object.entries(stationsData).forEach(([id, station]) => {
+      if (station.region === 'Alaska') {
+        VALID_STATIONS.add(id);
+      }
+    });
+    
+    console.log(`Loaded ${VALID_STATIONS.size} Alaska tide stations for validation`);
+    return VALID_STATIONS;
+  } catch (error) {
+    console.error('Failed to load tide stations, using fallback set:', error);
+    // Fallback to minimal verified set
+    VALID_STATIONS = new Set([
+      '9452210', // Juneau, AK
+      '9452400', // Skagway, Taiya Inlet, AK
+      '9450460', // Ketchikan, Tongass Narrows, AK
+      '9455920', // Anchorage, AK
+      '9455500', // Seward, AK
+      '9455760', // Nikiski, AK
+      '9454050', // Valdez, AK
+      '9454240', // Cordova, AK
+      '9453220', // Kodiak Island, AK
+      '9459450', // Homer, AK
+      '9462450', // Nikolski, AK
+    ]);
+    return VALID_STATIONS;
+  }
+}
 
 // Rate limiting store (in-memory)
 const rateLimitStore = new Map();
 
-function validateStationId(stationId) {
+async function validateStationId(stationId) {
   if (!stationId || typeof stationId !== 'string') {
     return false;
   }
   
-  return VALID_STATIONS.has(stationId);
+  const validStations = await loadValidStations();
+  return validStations.has(stationId);
 }
 
 function validateDateString(dateStr) {
@@ -240,7 +252,7 @@ exports.handler = async (event, context) => {
     console.log('Extracted station ID:', stationId);
     
     // Validate station ID
-    if (!validateStationId(stationId)) {
+    if (!(await validateStationId(stationId))) {
       return {
         statusCode: 400,
         headers: {

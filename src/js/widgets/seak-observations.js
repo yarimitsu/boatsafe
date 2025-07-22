@@ -104,20 +104,26 @@ class SEAKObservations {
                 
                 const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 10 });
                 const response = typeof data === 'string' ? JSON.parse(data) : data;
+                console.log('Received SEAK observations response:', response);
                 
                 if (response && response.status === 'success' && response.observations) {
-                    // Find the specific station data
+                    // Find the specific station data - check both 'stn' and 'stationId' fields
                     const stationData = response.observations.find(obs => 
-                        obs.stationId === stationId || obs.stationName === stationId
+                        obs.stationId === stationId || 
+                        obs.stn === stationId ||
+                        obs.stationName === stationId
                     );
                     
                     if (stationData) {
+                        console.log('Found station data for', stationId, ':', stationData);
                         this.renderStationObservations(stationData, response.timestamp);
                     } else {
-                        this.showError(`No data available for station ${stationId}`);
+                        console.warn('Station not found in observations data. Available stations:', response.observations.map(obs => obs.stn || obs.stationId));
+                        this.showError(`No data available for station ${stationId}. Station may be offline or not reporting current observations.`);
                     }
                 } else {
-                    this.showError('Failed to load observation data');
+                    console.error('Invalid response format:', response);
+                    this.showError('Failed to load observation data - invalid response format');
                 }
             }
             
@@ -129,7 +135,20 @@ class SEAKObservations {
             }
         } catch (error) {
             console.error('Failed to load station observations:', error);
-            this.showError(`Failed to load observations: ${error.message}`);
+            
+            // Provide more specific error messages based on error type
+            let errorMessage = 'Failed to load observations';
+            if (error.name === 'NetworkError' || error.message.includes('fetch')) {
+                errorMessage = 'Network error - please check your internet connection';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = 'Request timed out - NOAA servers may be busy';
+            } else if (error.message.includes('JSON')) {
+                errorMessage = 'Invalid data format received from weather service';
+            } else {
+                errorMessage = `Failed to load observations: ${error.message}`;
+            }
+            
+            this.showError(errorMessage);
         }
     }
 
@@ -139,16 +158,63 @@ class SEAKObservations {
      * @param {string} timestamp - Data timestamp
      */
     renderStationObservations(stationData, timestamp) {
-        const stationName = this.stations.stations[stationData.stationId] || stationData.stationName || stationData.stationId;
+        const stationId = stationData.stationId || stationData.stn;
+        const stationName = this.stations.stations[stationId] || stationData.stationName || stationData.stnName || stationId;
         
         let observationLines = [];
         
-        // Create observation lines for available data
-        Object.entries(stationData).forEach(([key, value]) => {
-            if (key !== 'stationId' && key !== 'stationName' && value && typeof value === 'object') {
-                const displayValue = typeof value.value === 'number' ? 
-                    value.value.toFixed(1) : value.value;
-                observationLines.push(`<div class="observation-line"><strong>${key}:</strong> ${displayValue}${value.unit ? ' ' + value.unit : ''}</div>`);
+        // Handle the NOAA data format - direct field mapping with appropriate units and labels
+        const dataFields = {
+            'temp': { label: 'Temperature', unit: '°F', format: (val) => parseFloat(val).toFixed(1) },
+            'dewPt': { label: 'Dew Point', unit: '°F', format: (val) => parseFloat(val).toFixed(1) },
+            'rh': { label: 'Relative Humidity', unit: '%', format: (val) => parseFloat(val).toFixed(1) },
+            'windSpd': { label: 'Wind Speed', unit: ' mph', format: (val) => parseFloat(val).toFixed(1) },
+            'windDir': { label: 'Wind Direction', unit: '', format: (val) => val },
+            'windGust': { label: 'Wind Gust', unit: ' mph', format: (val) => parseFloat(val).toFixed(1) },
+            'seaLevelPressure': { label: 'Sea Level Pressure', unit: ' mb', format: (val) => parseFloat(val).toFixed(1) },
+            'altimeter': { label: 'Pressure', unit: ' inHg', format: (val) => parseFloat(val).toFixed(2) },
+            'visibility': { label: 'Visibility', unit: ' mi', format: (val) => parseFloat(val).toFixed(1) },
+            'ceiling': { label: 'Ceiling', unit: ' ft', format: (val) => parseFloat(val).toFixed(0) },
+            'weather': { label: 'Weather Conditions', unit: '', format: (val) => val },
+            'sky': { label: 'Sky Conditions', unit: '', format: (val) => val },
+            'precip': { label: 'Precipitation', unit: ' in', format: (val) => parseFloat(val).toFixed(2) }
+        };
+        
+        // Process each available data field
+        Object.keys(dataFields).forEach(fieldKey => {
+            const fieldInfo = dataFields[fieldKey];
+            let value = stationData[fieldKey];
+            
+            // Handle both direct field access and the Netlify function's nested structure
+            if (stationData[fieldInfo.label] && typeof stationData[fieldInfo.label] === 'object') {
+                // Netlify function format: { value: x, unit: y }
+                value = stationData[fieldInfo.label].value;
+                const unit = stationData[fieldInfo.label].unit || fieldInfo.unit;
+                
+                if (value && value !== '-' && value !== '--' && value !== 'M' && value !== '') {
+                    try {
+                        let displayValue = fieldInfo.format(value);
+                        if (!isNaN(parseFloat(displayValue)) || fieldKey === 'windDir' || fieldKey === 'weather' || fieldKey === 'sky') {
+                            observationLines.push(
+                                `<div class="observation-line"><strong>${fieldInfo.label}:</strong> ${displayValue}${unit}</div>`
+                            );
+                        }
+                    } catch (error) {
+                        console.debug(`Skipping invalid value for ${fieldInfo.label}:`, value);
+                    }
+                }
+            } else if (value && value !== '-' && value !== '--' && value !== 'M' && value !== '') {
+                // Direct field format (raw NOAA data)
+                try {
+                    let displayValue = fieldInfo.format(value);
+                    if (!isNaN(parseFloat(displayValue)) || fieldKey === 'windDir' || fieldKey === 'weather' || fieldKey === 'sky') {
+                        observationLines.push(
+                            `<div class="observation-line"><strong>${fieldInfo.label}:</strong> ${displayValue}${fieldInfo.unit}</div>`
+                        );
+                    }
+                } catch (error) {
+                    console.debug(`Skipping invalid value for ${fieldKey}:`, value);
+                }
             }
         });
         
@@ -159,7 +225,7 @@ class SEAKObservations {
                     <span class="period-time">${this.formatDate(timestamp)}</span>
                 </div>
                 <div class="forecast-text observation-data">
-                    ${observationLines.length > 0 ? observationLines.join('') : '<div class="observation-line">No observation data available</div>'}
+                    ${observationLines.length > 0 ? observationLines.join('') : '<div class="observation-line">No current observation data available for this station</div>'}
                 </div>
                 <div class="station-link">
                     <a href="https://www.weather.gov/ajk/MarineObservations" target="_blank" rel="noopener">
@@ -239,13 +305,28 @@ class SEAKObservations {
         if (!dateString) return 'Unknown';
         
         try {
-            return new Date(dateString).toLocaleDateString('en-US', {
+            // Handle NOAA timestamp format: "07/22/2025 08:00:33 Local"
+            let date;
+            if (dateString.includes('Local')) {
+                // Parse NOAA format
+                const dateOnly = dateString.replace(' Local', '');
+                date = new Date(dateOnly);
+            } else {
+                date = new Date(dateString);
+            }
+            
+            if (isNaN(date.getTime())) {
+                return dateString; // Return original if parsing fails
+            }
+            
+            return date.toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
             });
         } catch (error) {
+            console.debug('Date parsing error:', error, 'for date string:', dateString);
             return dateString;
         }
     }

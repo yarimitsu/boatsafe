@@ -39,11 +39,12 @@ function getClientIp(event) {
 }
 
 async function fetchMarineAlerts() {
-  // Use NWS API for current Alaska marine alerts
-  const apiUrl = 'https://api.weather.gov/alerts?area=AK&status=actual&urgency=immediate,expected&severity=minor,moderate,severe,extreme';
-  
+  // Fetch from multiple sources for comprehensive Alaska weather warnings
   const alerts = [];
   let sources_status = [];
+  
+  // Source 1: NWS API for current Alaska alerts
+  const apiUrl = 'https://api.weather.gov/alerts?area=AK&status=actual&urgency=immediate,expected&severity=minor,moderate,severe,extreme';
   
   try {
     console.log(`Fetching current Alaska alerts from NWS API: ${apiUrl}`);
@@ -58,33 +59,15 @@ async function fetchMarineAlerts() {
       const data = await response.json();
       console.log(`Got ${data.features?.length || 0} alerts from NWS API`);
       
-      // Filter for marine-related alerts
-      const marineAlerts = data.features?.filter(feature => {
-        const props = feature.properties;
-        const event = props.event?.toLowerCase() || '';
-        const headline = props.headline?.toLowerCase() || '';
-        const description = props.description?.toLowerCase() || '';
-        
-        // Check if alert is marine-related
-        return event.includes('marine') || 
-               event.includes('small craft') || 
-               event.includes('gale') || 
-               event.includes('storm warning') || 
-               headline.includes('marine') || 
-               headline.includes('small craft') || 
-               headline.includes('coastal') ||
-               description.includes('marine') ||
-               description.includes('waters') ||
-               description.includes('boaters');
-      }) || [];
-      
-      console.log(`Found ${marineAlerts.length} marine-related alerts`);
+      // Process ALL alerts, not just marine-filtered ones as per task requirements
+      const allAlerts = data.features || [];
+      console.log(`Processing ${allAlerts.length} total alerts`);
       
       // Convert to our alert format
-      marineAlerts.forEach(feature => {
+      allAlerts.forEach(feature => {
         const props = feature.properties;
         alerts.push({
-          type: props.event || 'Marine Alert',
+          type: props.event || 'Weather Alert',
           source: 'NWS Alaska Region',
           text: props.description || props.headline || 'No description available',
           headline: props.headline,
@@ -98,7 +81,7 @@ async function fetchMarineAlerts() {
       });
       
       sources_status.push({
-        source: 'NWS API (Alaska Marine Alerts)',
+        source: 'NWS API (Alaska Weather Alerts)',
         status: 'success',
         alertCount: alerts.length,
         totalFeatures: data.features?.length || 0
@@ -107,7 +90,7 @@ async function fetchMarineAlerts() {
     } else {
       console.log(`Failed to fetch from NWS API: ${response.status}`);
       sources_status.push({
-        source: 'NWS API (Alaska Marine Alerts)',
+        source: 'NWS API (Alaska Weather Alerts)',
         status: 'error',
         error: `HTTP ${response.status}`
       });
@@ -115,7 +98,60 @@ async function fetchMarineAlerts() {
   } catch (error) {
     console.error('Error fetching from NWS API:', error.message);
     sources_status.push({
-      source: 'NWS API (Alaska Marine Alerts)',
+      source: 'NWS API (Alaska Weather Alerts)',
+      status: 'error',
+      error: error.message
+    });
+  }
+  
+  // Source 2: Alaska Region Hazardous Weather Outlook as backup
+  try {
+    const hwoUrl = 'https://forecast.weather.gov/product.php?site=NWS&issuedby=ARH&product=HWO';
+    console.log(`Fetching Alaska hazardous weather outlook: ${hwoUrl}`);
+    const response = await fetch(hwoUrl);
+    
+    if (response.ok) {
+      const text = await response.text();
+      
+      // Simple text parsing for hazardous weather outlook
+      if (text.includes('None issued by this office recently') === false && 
+          text.includes('Hazardous Weather Outlook')) {
+        
+        // Extract content between pre tags or similar structured content
+        const contentMatch = text.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+        if (contentMatch && contentMatch[1].trim()) {
+          alerts.push({
+            type: 'Hazardous Weather Outlook',
+            source: 'NWS Alaska Region (ARH)',
+            text: contentMatch[1].trim(),
+            headline: 'Alaska Hazardous Weather Outlook',
+            effectiveTime: new Date().toISOString(),
+            expirationTime: null,
+            severity: 'moderate',
+            urgency: 'expected',
+            areas: 'Alaska Region',
+            id: generateAlertId('HWO', 'ARH')
+          });
+        }
+      }
+      
+      sources_status.push({
+        source: 'ARH Hazardous Weather Outlook',
+        status: 'success',
+        alertCount: alerts.length - (sources_status[0]?.alertCount || 0)
+      });
+      
+    } else {
+      sources_status.push({
+        source: 'ARH Hazardous Weather Outlook',
+        status: 'error',
+        error: `HTTP ${response.status}`
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching HWO:', error.message);
+    sources_status.push({
+      source: 'ARH Hazardous Weather Outlook',
       status: 'error',
       error: error.message
     });
@@ -150,20 +186,7 @@ async function fetchMarineAlerts() {
   };
 }
 
-// Legacy function - no longer needed with NWS API
-// Kept for compatibility but not used
-
-function determineAlertSeverity(alertType, text) {
-  const content = text.toLowerCase();
-  
-  if (content.includes('warning') || content.includes('emergency')) {
-    return 'high';
-  } else if (content.includes('watch') || content.includes('advisory')) {
-    return 'medium';
-  } else {
-    return 'low';
-  }
-}
+// Utility functions
 
 function generateAlertId(alertType, sourceName) {
   const timestamp = Date.now();
@@ -171,7 +194,7 @@ function generateAlertId(alertType, sourceName) {
   return `${hash}_${timestamp}`;
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
   console.log('Marine alerts function called with:', {
     method: event.httpMethod,
     path: event.path,

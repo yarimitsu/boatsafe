@@ -75,6 +75,7 @@ class BoatSafeApp {
             discussion: new Discussion(),
             coastalForecast: new CoastalForecast(),
             tidesCurrents: new TidesCurrents(),
+            currents: new Currents(),
             observations: new SEAKObservations(),
             weather: new WeatherWidget()
         };

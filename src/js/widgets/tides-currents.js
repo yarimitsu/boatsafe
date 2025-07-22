@@ -53,20 +53,37 @@ class TidesCurrents {
      * Load tide stations data
      */
     async loadTideStations() {
-        // Real Alaska tide stations from NOAA - verified official names
-        this.tideStations = {
-            '9452210': { name: 'Juneau, AK' },
-            '9452400': { name: 'Skagway, Taiya Inlet, AK' },
-            '9450460': { name: 'Ketchikan, Tongass Narrows, AK' },
-            '9455920': { name: 'Anchorage, AK' },
-            '9462450': { name: 'Nikolski, AK' },
-            '9455500': { name: 'Seward, AK' },
-            '9455760': { name: 'Nikiski, AK' },
-            '9454050': { name: 'Valdez, AK' },
-            '9454240': { name: 'Cordova, AK' },
-            '9453220': { name: 'Kodiak Island, AK' },
-            '9459450': { name: 'Homer, AK' }
-        };
+        try {
+            // Load comprehensive tide stations data
+            const response = await window.BoatSafe.http.get('./data/tide-stations.json', { cacheTTL: 1440 });
+            const allStations = typeof response === 'string' ? JSON.parse(response) : response;
+            
+            // Filter to Alaska stations only
+            this.tideStations = {};
+            Object.entries(allStations).forEach(([id, station]) => {
+                if (station.region === 'Alaska') {
+                    this.tideStations[id] = station;
+                }
+            });
+            
+            console.log(`Loaded ${Object.keys(this.tideStations).length} Alaska tide stations`);
+        } catch (error) {
+            console.error('Failed to load tide stations:', error);
+            // Fallback to minimal set of verified Alaska stations
+            this.tideStations = {
+                '9452210': { name: 'Juneau, AK' },
+                '9452400': { name: 'Skagway, Taiya Inlet, AK' },
+                '9450460': { name: 'Ketchikan, Tongass Narrows, AK' },
+                '9455920': { name: 'Anchorage, AK' },
+                '9462450': { name: 'Nikolski, AK' },
+                '9455500': { name: 'Seward, AK' },
+                '9455760': { name: 'Nikiski, AK' },
+                '9454050': { name: 'Valdez, AK' },
+                '9454240': { name: 'Cordova, AK' },
+                '9453220': { name: 'Kodiak Island, AK' },
+                '9459450': { name: 'Homer, AK' }
+            };
+        }
     }
 
     /**
