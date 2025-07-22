@@ -132,13 +132,15 @@ function processSEAKData(rawData) {
       }
     });
     
-    // Only return stations with valid ID/name and at least some data
-    if ((stationData.stationId || stationData.stationName) && Object.keys(stationData).length > 2) {
+    // Only return stations with valid ID/name - be more lenient about data requirements
+    if (stationData.stationId || stationData.stationName) {
       return stationData;
     }
     
     return null;
   }).filter(station => station !== null);
+  
+  console.log(`Processed ${observations.length} valid stations from ${observationsArray.length} raw stations`);
   
   return {
     timestamp: timestamp,
