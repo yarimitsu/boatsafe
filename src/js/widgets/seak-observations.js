@@ -47,7 +47,8 @@ class SEAKObservations {
                 data = typeof response === 'string' ? JSON.parse(response) : response;
             }
             
-            if (data && data.status === 'success' && data.observations) {
+            if (data && data.status === 'success' && data.observations && Array.isArray(data.observations)) {
+                console.log(`Loaded ${data.observations.length} SEAK observation stations`);
                 this.currentData = data;
                 this.allStations = data.observations;
                 this.populateStationDropdown();
@@ -67,11 +68,14 @@ class SEAKObservations {
                     console.warn('Failed to restore station preference:', error);
                 }
             } else {
-                throw new Error('Invalid response format or no data available');
+                const errorMsg = data?.observations ? 
+                    'No valid observation stations found' : 
+                    'Invalid response format from NOAA data source';
+                throw new Error(errorMsg);
             }
         } catch (error) {
             console.error('Failed to load SEAK observations:', error);
-            this.showError('Failed to load SEAK observations data');
+            this.showError(`Failed to load SEAK observations: ${error.message}`);
         }
     }
 
@@ -161,55 +165,69 @@ class SEAKObservations {
         const stationName = station.stationName || station.stationId || 'Unknown Station';
         const stationId = station.stationId || station.stationName;
         
-        // Key observation fields to display
-        const keyFields = [
-            { key: 'Temperature', label: 'Temperature', convert: this.convertTemp },
-            { key: 'Temp', label: 'Temperature', convert: this.convertTemp },
-            { key: 'Dew Point', label: 'Dew Point', convert: this.convertTemp },
-            { key: 'DewPoint', label: 'Dew Point', convert: this.convertTemp },
-            { key: 'Relative Humidity', label: 'Relative Humidity' },
-            { key: 'RH', label: 'Relative Humidity' },
-            { key: 'Wind Speed', label: 'Wind Speed', convert: this.convertWindSpeed },
-            { key: 'WindSpeed', label: 'Wind Speed', convert: this.convertWindSpeed },
-            { key: 'Wind Direction', label: 'Wind Direction', convert: this.convertWindDirection },
-            { key: 'WindDir', label: 'Wind Direction', convert: this.convertWindDirection },
-            { key: 'Gust Speed', label: 'Wind Gust', convert: this.convertWindSpeed },
-            { key: 'GustSpeed', label: 'Wind Gust', convert: this.convertWindSpeed },
-            { key: 'Pressure', label: 'Pressure' },
-            { key: 'SeaLevelPressure', label: 'Sea Level Pressure' },
-            { key: 'Visibility', label: 'Visibility' },
-            { key: 'Ceiling', label: 'Ceiling' }
+        // Priority order for displaying observation fields (most important first)
+        const fieldPriority = [
+            'Temperature',
+            'Dew Point',
+            'Relative Humidity',
+            'Wind Direction',
+            'Wind Speed',
+            'Wind Gust',
+            'Sea Level Pressure',
+            'Pressure',
+            'Visibility',
+            'Weather Conditions',
+            'Sky Conditions',
+            'Ceiling',
+            'Precipitation'
         ];
 
-        // Build observation lines
+        // Build observation lines in priority order
         const observationLines = [];
-        keyFields.forEach(field => {
-            const fieldData = station[field.key];
-            if (fieldData && fieldData.value !== undefined && fieldData.value !== null && fieldData.value !== '-' && fieldData.value !== '') {
+        fieldPriority.forEach(fieldKey => {
+            const fieldData = station[fieldKey];
+            if (fieldData && fieldData.value !== undefined && fieldData.value !== null && 
+                fieldData.value !== '-' && fieldData.value !== '' && fieldData.value !== 'M') {
+                
                 let displayValue = fieldData.value;
                 let unit = fieldData.unit || '';
                 
-                // Apply conversion if available
-                if (field.convert) {
-                    const converted = field.convert(fieldData.value, unit);
+                // Apply conversions for marine use (metric to imperial where needed)
+                if (fieldKey === 'Temperature' || fieldKey === 'Dew Point') {
+                    const converted = this.convertTemp(fieldData.value, unit);
+                    displayValue = converted.value;
+                    unit = converted.unit;
+                } else if (fieldKey === 'Wind Speed' || fieldKey === 'Wind Gust') {
+                    const converted = this.convertWindSpeed(fieldData.value, unit);
+                    displayValue = converted.value;
+                    unit = converted.unit;
+                } else if (fieldKey === 'Wind Direction') {
+                    const converted = this.convertWindDirection(fieldData.value, unit);
                     displayValue = converted.value;
                     unit = converted.unit;
                 }
                 
                 observationLines.push(
-                    `<div class="observation-line">${field.label}: <span class="observation-value">${displayValue} ${unit}</span></div>`
+                    `<div class="observation-line">
+                        <span class="obs-label">${fieldKey}:</span> 
+                        <span class="observation-value">${displayValue}${unit ? ' ' + unit : ''}</span>
+                    </div>`
                 );
             }
         });
 
-        // If no observations found, show all available data
+        // If no priority fields found, show all available data
         if (observationLines.length === 0) {
             Object.keys(station).forEach(key => {
                 if (key !== 'stationId' && key !== 'stationName' && station[key] && typeof station[key] === 'object') {
                     const fieldData = station[key];
-                    if (fieldData.value !== undefined && fieldData.value !== null && fieldData.value !== '-' && fieldData.value !== '') {
+                    if (fieldData.value !== undefined && fieldData.value !== null && 
+                        fieldData.value !== '-' && fieldData.value !== '' && fieldData.value !== 'M') {
                         observationLines.push(
-                            `<div class="observation-line">${key}: <span class="observation-value">${fieldData.value} ${fieldData.unit || ''}</span></div>`
+                            `<div class="observation-line">
+                                <span class="obs-label">${key}:</span> 
+                                <span class="observation-value">${fieldData.value}${fieldData.unit ? ' ' + fieldData.unit : ''}</span>
+                            </div>`
                         );
                     }
                 }
@@ -220,10 +238,10 @@ class SEAKObservations {
             <div class="forecast-period">
                 <div class="period-header">
                     <strong>${stationName}</strong>
-                    <span class="period-time">${this.formatTime(this.currentData.updated)}</span>
+                    <span class="period-time">Updated: ${this.formatTime(this.currentData.timestamp || this.currentData.updated)}</span>
                 </div>
                 <div class="forecast-text observation-data">
-                    ${observationLines.length > 0 ? observationLines.join('') : '<div class="observation-line">No observation data available</div>'}
+                    ${observationLines.length > 0 ? observationLines.join('') : '<div class="observation-line">No current observation data available</div>'}
                 </div>
                 <div class="station-link">
                     <a href="https://www.weather.gov/ajk/MarineObservations" target="_blank" rel="noopener">

@@ -70,74 +70,85 @@ async function fetchSEAKObservations() {
 }
 
 function processSEAKData(rawData) {
-  // Extract timestamp (first element is typically the timestamp)
-  const timestamp = rawData[0] || new Date().toISOString();
+  // Handle the actual NOAA data structure: { ts: "timestamp", obData: [...] }
+  if (!rawData || typeof rawData !== 'object') {
+    throw new Error('Invalid data format received from NOAA');
+  }
   
-  // Process observations data (skip timestamp element)
-  const observations = rawData.slice(1).map(station => {
-    // Convert the station data to a more structured format
+  const timestamp = rawData.ts || new Date().toISOString();
+  const observationsArray = rawData.obData || rawData;
+  
+  if (!Array.isArray(observationsArray)) {
+    throw new Error('Expected observations array not found in NOAA data');
+  }
+  
+  // Process observations data from the obData array
+  const observations = observationsArray.map(station => {
+    if (!station || typeof station !== 'object') {
+      return null;
+    }
+    
     const stationData = {};
     
-    // Extract station info
-    Object.keys(station).forEach(key => {
-      const value = station[key];
+    // Extract core station info using actual NOAA field names
+    stationData.stationId = station.stn || station.stationId;
+    stationData.stationName = station.stnName || station.stationName || stationData.stationId;
+    
+    // Map NOAA observation fields to our format with proper units
+    const fieldMap = {
+      'temp': { label: 'Temperature', unit: '°F' },
+      'dewPt': { label: 'Dew Point', unit: '°F' },
+      'rh': { label: 'Relative Humidity', unit: '%' },
+      'windSpd': { label: 'Wind Speed', unit: 'mph' },
+      'windDir': { label: 'Wind Direction', unit: '°' },
+      'windGust': { label: 'Wind Gust', unit: 'mph' },
+      'seaLevelPressure': { label: 'Sea Level Pressure', unit: 'mb' },
+      'altimeter': { label: 'Pressure', unit: 'inHg' },
+      'visibility': { label: 'Visibility', unit: 'mi' },
+      'ceiling': { label: 'Ceiling', unit: 'ft' },
+      'weather': { label: 'Weather Conditions', unit: '' },
+      'sky': { label: 'Sky Conditions', unit: '' },
+      'precip': { label: 'Precipitation', unit: 'in' }
+    };
+    
+    // Process each observation field
+    Object.keys(fieldMap).forEach(noaaField => {
+      const fieldInfo = fieldMap[noaaField];
+      const value = station[noaaField];
       
-      // Handle special fields
-      if (key === 'Station Name' || key === 'station') {
-        stationData.stationName = value;
-      } else if (key === 'StationId' || key === 'station_id') {
-        stationData.stationId = value;
-      } else if (value !== null && value !== undefined && value !== '-' && value !== '') {
-        // Store observation data
-        stationData[key] = {
-          value: value,
-          unit: getFieldUnit(key)
+      // Only include non-empty, non-null, non-dash values
+      if (value !== null && value !== undefined && value !== '-' && value !== '' && value !== 'M') {
+        // Convert numeric strings to numbers where appropriate
+        let processedValue = value;
+        if (typeof value === 'string' && !isNaN(parseFloat(value)) && isFinite(value)) {
+          processedValue = parseFloat(value);
+        }
+        
+        stationData[fieldInfo.label] = {
+          value: processedValue,
+          unit: fieldInfo.unit
         };
       }
     });
     
-    // Ensure we have required fields
-    if (!stationData.stationId && station.StationId) {
-      stationData.stationId = station.StationId;
-    }
-    if (!stationData.stationName && station['Station Name']) {
-      stationData.stationName = station['Station Name'];
+    // Only return stations with valid ID/name and at least some data
+    if ((stationData.stationId || stationData.stationName) && Object.keys(stationData).length > 2) {
+      return stationData;
     }
     
-    return stationData;
-  }).filter(station => station.stationId || station.stationName);
+    return null;
+  }).filter(station => station !== null);
   
   return {
     timestamp: timestamp,
     updated: new Date().toISOString(),
     count: observations.length,
     observations: observations,
-    status: 'success'
+    status: 'success',
+    source: 'NOAA SEAK Marine Observations'
   };
 }
 
-function getFieldUnit(fieldName) {
-  const unitMap = {
-    'Temperature': '°F',
-    'Temp': '°F',
-    'Dew Point': '°F',
-    'DewPoint': '°F',
-    'Relative Humidity': '%',
-    'RH': '%',
-    'Wind Speed': 'mph',
-    'WindSpeed': 'mph',
-    'Wind Direction': '°',
-    'WindDir': '°',
-    'Gust Speed': 'mph',
-    'GustSpeed': 'mph',
-    'Pressure': 'mb',
-    'SeaLevelPressure': 'mb',
-    'Visibility': 'mi',
-    'Ceiling': 'ft'
-  };
-  
-  return unitMap[fieldName] || '';
-}
 
 exports.handler = async (event, context) => {
   console.log('SEAK observations function called with:', {

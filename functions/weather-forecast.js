@@ -73,13 +73,13 @@ async function fetchAllWarnings() {
   // Fetch all warning types
   for (const [code, name] of Object.entries(WARNING_TYPES)) {
     try {
-      const url = `https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=${code}&format=txt&version=1&glossary=0`;
+      const url = `https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=${code}&format=TXT&version=1&glossary=0`;
       console.log(`Fetching ${name} from: ${url}`);
       
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
-          'Accept': 'text/plain'
+          'Accept': 'text/plain, text/html'
         }
       });
       
@@ -87,15 +87,84 @@ async function fetchAllWarnings() {
         const text = await response.text();
         console.log(`Got ${name}, length: ${text.length}`);
         
+        let actualWarningText = '';
+        let isHtml = false;
+        
+        // Check if we got HTML instead of text
+        if (text.includes('<!DOCTYPE html') || text.includes('<html>')) {
+          isHtml = true;
+          console.log(`Processing HTML response for ${name}`);
+          
+          // Try to extract warning text from HTML - look for <pre> tags with specific classes
+          let preMatch = text.match(/<pre[^>]*class[^>]*glossaryProduct[^>]*>(.*?)<\/pre>/s);
+          if (!preMatch) {
+            // Fallback to any <pre> tag
+            preMatch = text.match(/<pre[^>]*>(.*?)<\/pre>/s);
+          }
+          
+          if (preMatch && preMatch[1]) {
+            const extractedText = preMatch[1].trim();
+            console.log(`Extracted from <pre> tag, length: ${extractedText.length}`);
+            
+            // Check if the extracted text contains actual warning content
+            if (extractedText.length > 50 && 
+                (extractedText.includes('URGENT') || 
+                 extractedText.includes('ADVISORY') || 
+                 extractedText.includes('WARNING') ||
+                 extractedText.includes('WATCH') ||
+                 extractedText.includes('National Weather Service') ||
+                 extractedText.includes('DISCUSSION') ||
+                 extractedText.includes('FORECAST') ||
+                 extractedText.includes('WWAK') ||
+                 extractedText.includes('PAJK'))) {
+              actualWarningText = extractedText;
+            } else {
+              // Check if it's just stating no products are current
+              actualWarningText = `No current ${name.toLowerCase()}.`;
+            }
+          } else {
+            // Look for "No current products" message in the HTML
+            if (text.includes('No current products') || 
+                text.includes('No products are current') ||
+                text.includes('No current watches') ||
+                text.includes('No current warnings')) {
+              actualWarningText = `No current ${name.toLowerCase()}.`;
+            } else {
+              // If we can't extract properly, indicate no content but log the issue
+              console.log(`Failed to extract content from HTML for ${name}, text length: ${text.length}`);
+              actualWarningText = `No current ${name.toLowerCase()}.`;
+            }
+          }
+        } else {
+          actualWarningText = text.trim();
+        }
+        
         // Extract timestamp from the warning text
-        const timestamp = extractTimestamp(text);
+        const timestamp = extractTimestamp(actualWarningText);
+        
+        // Determine if this has meaningful content
+        const hasActiveWarning = actualWarningText.length > 100 && 
+                                !actualWarningText.includes('No products are current') &&
+                                !actualWarningText.includes('No current watches') &&
+                                !actualWarningText.includes('No current warnings') &&
+                                !actualWarningText.startsWith('No current') &&
+                                (actualWarningText.includes('URGENT') || 
+                                 actualWarningText.includes('ADVISORY') || 
+                                 actualWarningText.includes('WARNING') ||
+                                 actualWarningText.includes('WATCH') ||
+                                 actualWarningText.includes('DISCUSSION') ||
+                                 actualWarningText.includes('FORECAST') ||
+                                 actualWarningText.includes('National Weather Service') ||
+                                 actualWarningText.includes('WWAK') ||
+                                 actualWarningText.includes('PAJK'));
         
         warnings[code] = {
           name: name,
-          content: text.trim(),
+          content: actualWarningText || `No ${name.toLowerCase()} currently active.`,
           timestamp: timestamp,
           updated: new Date().toISOString(),
-          hasContent: text.trim().length > 50 // Show warnings with meaningful content
+          hasContent: hasActiveWarning,
+          sourceType: isHtml ? 'html' : 'text'
         };
       } else {
         console.log(`Failed to fetch ${name}: ${response.status}`);
@@ -125,16 +194,27 @@ async function fetchAllWarnings() {
 function extractTimestamp(text) {
   // Look for various timestamp patterns in NOAA warnings
   const patterns = [
-    /(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST)\s*\w+\s*\w+\s*\d{1,2}\s*\d{4})/i,
+    // Pattern like "319 AM AKDT Mon Jul 21 2025"
     /(\d{3,4}\s*(AM|PM)\s*(AKDT|AKST)\s*\w+\s*\w+\s*\d{1,2}\s*\d{4})/i,
+    // Pattern like "3:19 AM AKDT Mon Jul 21 2025"
+    /(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST)\s*\w+\s*\w+\s*\d{1,2}\s*\d{4})/i,
+    // Pattern after "National Weather Service"
+    /National Weather Service.*?(\d{3,4}\s*(AM|PM)\s*(AKDT|AKST).*?\d{4})/i,
     /National Weather Service.*?(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST).*?\d{4})/i,
-    /(\w+\s*\w+\s*\d{1,2}\s*\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i
+    // Pattern like "Mon Jul 21 2025 3:19 AM"
+    /(\w+\s*\w+\s*\d{1,2}\s*\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i,
+    // Simple time pattern
+    /(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST))/i,
+    /(\d{3,4}\s*(AM|PM)\s*(AKDT|AKST))/i
   ];
   
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      return match[1] || match[0];
+      let timestamp = match[1] || match[0];
+      // Clean up timestamp formatting
+      timestamp = timestamp.replace(/\s+/g, ' ').trim();
+      return timestamp;
     }
   }
   

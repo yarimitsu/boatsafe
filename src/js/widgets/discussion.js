@@ -5,8 +5,12 @@ class Discussion {
     constructor() {
         this.container = document.getElementById('discussion');
         this.content = this.container.querySelector('.discussion-content');
+        this.toggleButton = document.getElementById('discussion-toggle');
+        this.regionDropdown = document.getElementById('discussion-region-dropdown');
+        this.discussionDisplay = this.container.querySelector('.discussion-display');
         this.currentData = null;
         this.currentOffice = null;
+        this.isExpanded = false;
         
         this.init();
     }
@@ -15,8 +19,137 @@ class Discussion {
      * Initialize the widget
      */
     async init() {
-        this.showLoading();
-        await this.loadDiscussion();
+        this.setupToggleButton();
+        this.setupRegionSelector();
+        
+        // Default to collapsed state, don't auto-load discussion
+        this.content.style.display = 'none';
+        this.isExpanded = false;
+        
+        // Load default region preference
+        this.loadSavedPreferences();
+    }
+
+    /**
+     * Setup toggle button functionality
+     */
+    setupToggleButton() {
+        if (!this.toggleButton) return;
+        
+        this.toggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleDiscussion();
+        });
+    }
+
+    /**
+     * Setup region selector
+     */
+    setupRegionSelector() {
+        if (!this.regionDropdown) return;
+        
+        this.regionDropdown.addEventListener('change', (e) => {
+            const selectedRegion = e.target.value;
+            this.selectRegion(selectedRegion);
+        });
+    }
+
+    /**
+     * Toggle discussion visibility
+     */
+    toggleDiscussion() {
+        this.isExpanded = !this.isExpanded;
+        
+        if (this.isExpanded) {
+            this.expandDiscussion();
+        } else {
+            this.collapseDiscussion();
+        }
+        
+        // Update toggle button state
+        this.toggleButton.setAttribute('aria-expanded', this.isExpanded);
+    }
+
+    /**
+     * Expand discussion content
+     */
+    expandDiscussion() {
+        this.content.classList.add('expanding');
+        this.content.style.display = 'block';
+        
+        // Load discussion if not loaded or if we need to refresh
+        if (!this.currentData || this.shouldRefreshData()) {
+            this.loadDiscussion(this.currentOffice || 'AJK');
+        }
+        
+        // Remove expanding class after animation
+        setTimeout(() => {
+            this.content.classList.remove('expanding');
+        }, 300);
+    }
+
+    /**
+     * Collapse discussion content
+     */
+    collapseDiscussion() {
+        this.content.classList.add('collapsing');
+        
+        setTimeout(() => {
+            this.content.style.display = 'none';
+            this.content.classList.remove('collapsing');
+        }, 300);
+    }
+
+    /**
+     * Select a region for discussion
+     * @param {string} regionCode - Region office code (AJK, AFC, AFG)
+     */
+    selectRegion(regionCode) {
+        if (!regionCode) return;
+        
+        this.currentOffice = regionCode;
+        
+        // Save preference
+        try {
+            localStorage.setItem('boatsafe_discussion_region', regionCode);
+        } catch (error) {
+            console.warn('Failed to save region preference:', error);
+        }
+        
+        // If expanded, reload discussion for new region
+        if (this.isExpanded) {
+            this.loadDiscussion(regionCode);
+        }
+    }
+
+    /**
+     * Load saved preferences
+     */
+    loadSavedPreferences() {
+        try {
+            const savedRegion = localStorage.getItem('boatsafe_discussion_region');
+            if (savedRegion && this.regionDropdown) {
+                this.regionDropdown.value = savedRegion;
+                this.currentOffice = savedRegion;
+            }
+        } catch (error) {
+            console.warn('Failed to load saved preferences:', error);
+        }
+    }
+
+    /**
+     * Check if data should be refreshed (older than 30 minutes)
+     */
+    shouldRefreshData() {
+        if (!this.currentData || !this.currentData.properties?.updated) {
+            return true;
+        }
+        
+        const updated = new Date(this.currentData.properties.updated);
+        const now = new Date();
+        const diffMinutes = (now - updated) / (1000 * 60);
+        
+        return diffMinutes > 30;
     }
 
     /**
@@ -42,11 +175,11 @@ class Discussion {
             
             if (isLocal) {
                 // Local development - show placeholder
-                this.showLocalDevPlaceholder();
+                this.showLocalDevPlaceholder(office);
             } else {
-                // Production - fetch real data via Netlify function
-                const proxyUrl = `${currentHost}/.netlify/functions/forecast-discussion`;
-                console.log('Fetching forecast discussion from:', proxyUrl);
+                // Production - fetch real data via Netlify function with office parameter
+                const proxyUrl = `${currentHost}/.netlify/functions/forecast-discussion?office=${encodeURIComponent(office)}`;
+                console.log(`Fetching forecast discussion for ${office} from:`, proxyUrl);
                 const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30 });
                 console.log('Received forecast discussion data:', data);
                 this.currentData = data;
@@ -54,22 +187,39 @@ class Discussion {
             }
         } catch (error) {
             console.error('Failed to load forecast discussion:', error);
-            this.showError('Unable to load forecast discussion');
+            this.showError(`Unable to load forecast discussion for ${this.getOfficeName(office)}`);
         }
     }
 
     /**
-     * Show local development placeholder
+     * Get office name from code
+     * @param {string} officeCode - Office code (AJK, AFC, AFG)
+     * @returns {string} Office name
      */
-    showLocalDevPlaceholder() {
-        this.content.innerHTML = `
+    getOfficeName(officeCode) {
+        const officeNames = {
+            'AJK': 'Southeast Alaska (Juneau)',
+            'AFC': 'Southcentral Alaska (Anchorage)', 
+            'AFG': 'Northern Alaska (Fairbanks)'
+        };
+        return officeNames[officeCode] || officeCode;
+    }
+
+    /**
+     * Show local development placeholder
+     * @param {string} office - Office code
+     */
+    showLocalDevPlaceholder(office = 'AJK') {
+        const officeName = this.getOfficeName(office);
+        const content = this.discussionDisplay || this.content;
+        content.innerHTML = `
             <div class="forecast-period">
                 <div class="period-header">
-                    <strong>Forecast Discussion</strong>
+                    <strong>Forecast Discussion - ${officeName}</strong>
                     <span class="period-time">Local Development Mode</span>
                 </div>
                 <div class="forecast-text">
-                    Deploy to Netlify to see the real Area Forecast Discussion from meteorologists.
+                    Deploy to Netlify to see the real Area Forecast Discussion from meteorologists for ${officeName}.
                     <br><br>
                     This widget displays technical meteorological analysis and reasoning behind the forecast.
                 </div>
@@ -97,7 +247,7 @@ class Discussion {
         const html = `
             <div class="forecast-period">
                 <div class="period-header">
-                    <strong>Forecast Discussion - ${officeName || office}</strong>
+                    <strong>Forecast Discussion - ${officeName || this.getOfficeName(office)}</strong>
                     <span class="period-time">${issuedTime || this.formatDate(new Date(updated))}</span>
                 </div>
                 <div class="forecast-text">
@@ -106,7 +256,8 @@ class Discussion {
             </div>
         `;
 
-        this.content.innerHTML = html;
+        const content = this.discussionDisplay || this.content;
+        content.innerHTML = html;
     }
 
     /**
@@ -342,7 +493,10 @@ class Discussion {
      * Show loading state
      */
     showLoading() {
-        this.content.innerHTML = '<div class="loading">Loading discussion...</div>';
+        const content = this.discussionDisplay || this.content;
+        const officeName = this.currentOffice ? this.getOfficeName(this.currentOffice) : '';
+        const loadingText = officeName ? `Loading discussion for ${officeName}...` : 'Loading discussion...';
+        content.innerHTML = `<div class="loading">${loadingText}</div>`;
     }
 
     /**
@@ -350,7 +504,8 @@ class Discussion {
      * @param {string} message - Error message
      */
     showError(message) {
-        this.content.innerHTML = `
+        const content = this.discussionDisplay || this.content;
+        content.innerHTML = `
             <div class="status-message status-error">
                 <strong>Error:</strong> ${message}
             </div>

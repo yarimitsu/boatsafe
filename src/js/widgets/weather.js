@@ -156,7 +156,7 @@ class WeatherWidget {
                         ${displayContent}
                     </div>
                     ${hasContent ? `
-                        <button class="expand-btn" onclick="this.parentElement.classList.toggle('expanded')">
+                        <button class="expand-btn" onclick="this.parentElement.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('expanded'))">
                             <span class="expand-text">Show Full Text</span>
                             <span class="collapse-text">Show Less</span>
                         </button>

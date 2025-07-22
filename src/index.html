@@ -103,22 +103,48 @@
                     </div>
                 </section>
 
-                <!-- Tides -->
+                <!-- Tides & Currents Dual Widget -->
                 <section class="widget-container">
-                    <div id="tides" class="widget">
+                    <div id="tides-currents" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Tide Information
+                            Tides & Currents
                         </h2>
-                        <div class="tides-content">
-                            <div class="tide-location-selector">
-                                <label for="tide-station-dropdown" class="dropdown-label">Select tide station:</label>
-                                <select id="tide-station-dropdown" class="tide-station-dropdown">
-                                    <option value="">Select a station...</option>
-                                </select>
+                        <div class="tides-currents-content">
+                            <!-- Date Navigation -->
+                            <div class="date-navigation">
+                                <!-- Navigation will be inserted here by JavaScript -->
                             </div>
-                            <div class="tide-data-container">
-                                <div class="loading">Select a tide station to view data</div>
+                            
+                            <!-- Dual Data Sections -->
+                            <div class="dual-sections">
+                                <!-- Tides Section -->
+                                <div class="tides-section">
+                                    <h3 class="section-title">Tides</h3>
+                                    <div class="tide-location-selector">
+                                        <label for="tide-station-dropdown" class="dropdown-label">Select tide station:</label>
+                                        <select id="tide-station-dropdown" class="station-dropdown">
+                                            <option value="">Select a station...</option>
+                                        </select>
+                                    </div>
+                                    <div class="tide-data-container">
+                                        <div class="loading">Select a tide station to view data</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Currents Section -->
+                                <div class="currents-section">
+                                    <h3 class="section-title">Currents</h3>
+                                    <div class="current-location-selector">
+                                        <label for="current-station-dropdown" class="dropdown-label">Select current station:</label>
+                                        <select id="current-station-dropdown" class="station-dropdown">
+                                            <option value="">Select a station...</option>
+                                        </select>
+                                    </div>
+                                    <div class="current-data-container">
+                                        <div class="loading">Select a current station to view data</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -129,10 +155,25 @@
                     <div id="discussion" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Forecast Discussion
+                            <span class="header-title">Forecast Discussion</span>
+                            <button class="toggle-button" id="discussion-toggle" aria-expanded="false" aria-controls="discussion-content">
+                                <svg class="chevron-icon" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
                         </h2>
-                        <div class="discussion-content">
-                            <div class="loading">Loading discussion...</div>
+                        <div class="discussion-content collapsible-content" id="discussion-content" style="display: none;">
+                            <div class="region-selector">
+                                <label for="discussion-region-dropdown" class="dropdown-label">Select region:</label>
+                                <select id="discussion-region-dropdown" class="region-dropdown">
+                                    <option value="AJK">Southeast Alaska (Juneau)</option>
+                                    <option value="AFC">Southcentral Alaska (Anchorage)</option>
+                                    <option value="AFG">Northern Alaska (Fairbanks)</option>
+                                </select>
+                            </div>
+                            <div class="discussion-display">
+                                <div class="loading">Loading discussion...</div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -208,7 +249,7 @@
     <script src="js/widgets/forecast-summary.js"></script>
     <script src="js/widgets/discussion.js"></script>
     <script src="js/widgets/coastal-forecast.js"></script>
-    <script src="js/widgets/tides.js"></script>
+    <script src="js/widgets/tides-currents.js"></script>
     <script src="js/widgets/seak-observations.js"></script>
     <script src="js/widgets/weather.js"></script>
     <script src="js/app.js"></script>

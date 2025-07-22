@@ -38,12 +38,13 @@ function getClientIp(event) {
          '127.0.0.1';
 }
 
-async function fetchForecastDiscussion() {
-  // NOAA Area Forecast Discussion for Juneau (AJK)
-  const url = 'https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=AFD&format=txt&version=1&glossary=0';
+async function fetchForecastDiscussion(office = 'AJK') {
+  // Get office information
+  const officeInfo = getOfficeInfo(office);
+  const url = `https://forecast.weather.gov/product.php?site=NWS&issuedby=${office}&product=AFD&format=txt&version=1&glossary=0`;
   
   try {
-    console.log(`Fetching forecast discussion from: ${url}`);
+    console.log(`Fetching forecast discussion for ${office} (${officeInfo.name}) from: ${url}`);
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
@@ -54,7 +55,7 @@ async function fetchForecastDiscussion() {
     
     if (response.ok) {
       const text = await response.text();
-      console.log(`Got forecast discussion (${text.length} chars)`);
+      console.log(`Got forecast discussion for ${office} (${text.length} chars)`);
       
       // Parse and format the discussion
       const parsedDiscussion = parseForecastDiscussion(text);
@@ -62,24 +63,51 @@ async function fetchForecastDiscussion() {
       return {
         properties: {
           updated: new Date().toISOString(),
-          office: 'AJK',
-          officeName: 'Juneau, AK',
+          office: office,
+          officeName: officeInfo.name,
           product: 'AFD',
           productName: 'Area Forecast Discussion',
           text: parsedDiscussion.text,
           issuedTime: parsedDiscussion.issuedTime,
           author: parsedDiscussion.author,
-          sections: parsedDiscussion.sections
+          sections: parsedDiscussion.sections,
+          region: officeInfo.region
         }
       };
     } else {
       console.log(`Failed ${response.status}: ${response.statusText}`);
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status} - No discussion available for ${officeInfo.name}`);
     }
   } catch (error) {
-    console.error(`Failed to fetch from ${url}:`, error.message);
-    throw new Error('Unable to fetch forecast discussion from NWS');
+    console.error(`Failed to fetch forecast discussion for ${office}:`, error.message);
+    throw new Error(`Unable to fetch forecast discussion from ${officeInfo.name} (${office})`);
   }
+}
+
+function getOfficeInfo(officeCode) {
+  const offices = {
+    'AJK': { 
+      name: 'Southeast Alaska (Juneau)', 
+      region: 'Southeast Alaska',
+      fullName: 'NWS Juneau, AK'
+    },
+    'AFC': { 
+      name: 'Southcentral Alaska (Anchorage)', 
+      region: 'Southcentral Alaska',
+      fullName: 'NWS Anchorage, AK'
+    },
+    'AFG': { 
+      name: 'Northern Alaska (Fairbanks)', 
+      region: 'Northern Alaska',
+      fullName: 'NWS Fairbanks, AK'
+    }
+  };
+  
+  return offices[officeCode] || { 
+    name: officeCode, 
+    region: 'Alaska',
+    fullName: `NWS ${officeCode}`
+  };
 }
 
 function parseForecastDiscussion(text) {
@@ -229,8 +257,26 @@ exports.handler = async (event, context) => {
       };
     }
     
-    // Fetch forecast discussion data
-    const data = await fetchForecastDiscussion();
+    // Extract and validate office parameter
+    const office = event.queryStringParameters?.office || 'AJK';
+    const validOffices = ['AJK', 'AFC', 'AFG'];
+    
+    if (!validOffices.includes(office.toUpperCase())) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          error: 'Invalid office parameter',
+          message: `Office must be one of: ${validOffices.join(', ')}`
+        })
+      };
+    }
+    
+    // Fetch forecast discussion data for specified office
+    const data = await fetchForecastDiscussion(office.toUpperCase());
     
     return {
       statusCode: 200,

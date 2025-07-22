@@ -74,7 +74,7 @@ class BoatSafeApp {
             forecastSummary: new ForecastSummary(),
             discussion: new Discussion(),
             coastalForecast: new CoastalForecast(),
-            tides: new Tides(),
+            tidesCurrents: new TidesCurrents(),
             observations: new SEAKObservations(),
             weather: new WeatherWidget()
         };
@@ -181,9 +181,9 @@ class BoatSafeApp {
                     console.warn('Discussion loading failed:', err);
                     return { error: 'Discussion not available', type: 'discussion' };
                 }),
-                this.loadTides(regionId).catch(err => {
-                    console.warn('Tides loading failed:', err);
-                    return { error: 'Tide data not available', type: 'tides' };
+                Promise.resolve({ success: true, type: 'tides-currents' }).catch(err => {
+                    console.warn('Tides/Currents widget is self-contained:', err);
+                    return { error: 'Tides/Currents widget handles its own data', type: 'tides-currents' };
                 }),
                 Promise.resolve({ success: true, type: 'observations' }).catch(err => {
                     console.warn('Observations loading failed:', err);
@@ -195,7 +195,7 @@ class BoatSafeApp {
 
             // Update widgets with results
             results.forEach((result, index) => {
-                const widgetNames = ['Discussion', 'Tides', 'Observations'];
+                const widgetNames = ['Discussion', 'Tides & Currents', 'Observations'];
                 console.log(`Widget ${index} (${widgetNames[index]}): status=${result.status}, value=`, result.value);
                 
                 if (result.status === 'fulfilled' && result.value && !result.value.error) {
@@ -204,11 +204,11 @@ class BoatSafeApp {
                             this.widgets.discussion.update(result.value);
                             console.log('Updated discussion widget');
                             break;
-                        case 1: // Tides
-                            this.widgets.tides.update(result.value);
-                            console.log('Updated tides widget');
+                        case 1: // Tides & Currents
+                            // TidesCurrents widget handles its own initialization
+                            console.log('TidesCurrents widget is self-contained');
                             break;
-                        case 3: // Observations
+                        case 2: // Observations
                             // SEAK observations widget handles its own initialization
                             console.log('SEAK observations widget is self-contained');
                             break;
@@ -222,13 +222,11 @@ class BoatSafeApp {
                         case 0: // Discussion
                             this.widgets.discussion.showError('Discussion not available - using cached forecast data');
                             break;
-                        case 1: // Marine Alerts
-                            this.widgets.alerts.showNoAlerts();
+                        case 1: // Tides & Currents
+                            // TidesCurrents widget handles its own errors
+                            console.log('TidesCurrents widget handles its own errors');
                             break;
-                        case 2: // Tides
-                            this.widgets.tides.showDefault();
-                            break;
-                        case 3: // Observations
+                        case 2: // Observations
                             // SEAK observations widget handles its own errors
                             console.log('SEAK observations widget handles its own errors');
                             break;

@@ -66,8 +66,8 @@ const REGION_TO_FORECAST_URL = {
   'CWFYAK': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak53.pajk.cwf.yak.txt',
   'CWFAER': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
   'CWFALU': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-  'CWFWCZ': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak53.pafc.cwf.wcz.txt',
-  'CWFNSB': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak54.pafc.cwf.nsb.txt'
+  'CWFWCZ': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafg.cwf.wcz.txt',
+  'CWFNSB': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafg.cwf.nsb.txt'
 };
 
 // Region names mapping
