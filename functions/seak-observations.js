@@ -55,7 +55,8 @@ async function fetchSEAKObservations() {
     
     if (response.ok) {
       const data = await response.json();
-      console.log(`Got SEAK observations data with ${data.length} stations`);
+      const stationCount = data.obData ? data.obData.length : 'unknown number of';
+      console.log(`Got SEAK observations data with ${stationCount} stations`);
       
       // Process and return structured data
       return processSEAKData(data);

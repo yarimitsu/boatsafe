@@ -95,40 +95,42 @@ async function fetchAllWarnings() {
           isHtml = true;
           console.log(`Processing HTML response for ${name}`);
           
-          // Try to extract warning text from HTML - look for <pre> tags with specific classes
-          let preMatch = text.match(/<pre[^>]*class[^>]*glossaryProduct[^>]*>(.*?)<\/pre>/s);
-          if (!preMatch) {
-            // Fallback to any <pre> tag
-            preMatch = text.match(/<pre[^>]*>(.*?)<\/pre>/s);
-          }
-          
-          if (preMatch && preMatch[1]) {
-            const extractedText = preMatch[1].trim();
-            console.log(`Extracted from <pre> tag, length: ${extractedText.length}`);
-            
-            // Check if the extracted text contains actual warning content
-            if (extractedText.length > 50 && 
-                (extractedText.includes('URGENT') || 
-                 extractedText.includes('ADVISORY') || 
-                 extractedText.includes('WARNING') ||
-                 extractedText.includes('WATCH') ||
-                 extractedText.includes('National Weather Service') ||
-                 extractedText.includes('DISCUSSION') ||
-                 extractedText.includes('FORECAST') ||
-                 extractedText.includes('WWAK') ||
-                 extractedText.includes('PAJK'))) {
-              actualWarningText = extractedText;
-            } else {
-              // Check if it's just stating no products are current
-              actualWarningText = `No current ${name.toLowerCase()}.`;
-            }
+          // First check for "None issued by this office recently" or similar messages
+          if (text.includes('None issued by this office recently') ||
+              text.includes('No current products') || 
+              text.includes('No products are current') ||
+              text.includes('No current watches') ||
+              text.includes('No current warnings')) {
+            actualWarningText = `No current ${name.toLowerCase()}.`;
+            console.log(`Found 'none issued' message for ${name}`);
           } else {
-            // Look for "No current products" message in the HTML
-            if (text.includes('No current products') || 
-                text.includes('No products are current') ||
-                text.includes('No current watches') ||
-                text.includes('No current warnings')) {
-              actualWarningText = `No current ${name.toLowerCase()}.`;
+            // Try to extract warning text from HTML - look for <pre> tags with specific classes
+            let preMatch = text.match(/<pre[^>]*class[^>]*glossaryProduct[^>]*>(.*?)<\/pre>/s);
+            if (!preMatch) {
+              // Fallback to any <pre> tag
+              preMatch = text.match(/<pre[^>]*>(.*?)<\/pre>/s);
+            }
+            
+            if (preMatch && preMatch[1]) {
+              const extractedText = preMatch[1].trim();
+              console.log(`Extracted from <pre> tag, length: ${extractedText.length}`);
+              
+              // Check if the extracted text contains actual warning content
+              if (extractedText.length > 50 && 
+                  (extractedText.includes('URGENT') || 
+                   extractedText.includes('ADVISORY') || 
+                   extractedText.includes('WARNING') ||
+                   extractedText.includes('WATCH') ||
+                   extractedText.includes('National Weather Service') ||
+                   extractedText.includes('DISCUSSION') ||
+                   extractedText.includes('FORECAST') ||
+                   extractedText.includes('WWAK') ||
+                   extractedText.includes('PAJK'))) {
+                actualWarningText = extractedText;
+              } else {
+                // Check if it's just stating no products are current
+                actualWarningText = `No current ${name.toLowerCase()}.`;
+              }
             } else {
               // If we can't extract properly, indicate no content but log the issue
               console.log(`Failed to extract content from HTML for ${name}, text length: ${text.length}`);
