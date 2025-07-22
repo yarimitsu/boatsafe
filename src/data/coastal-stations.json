@@ -1,0 +1,11 @@
+{
+  "stations": {
+    "CWFAJK": "SE Inner Coastal Waters",
+    "CWFAEG": "SE Outside Coastal Waters",
+    "CWFYAK": "Yakutat Bay",
+    "CWFAER": "North Gulf Coast, Kodiak and Cook Inlet",
+    "CWFALU": "Southwest AK and the Aleutians",
+    "CWFWCZ": "Northwestern AK",
+    "CWFNSB": "Arctic"
+  }
+}

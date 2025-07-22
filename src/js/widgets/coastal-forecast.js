@@ -11,97 +11,7 @@ class CoastalForecast {
         this.currentData = null;
         this.currentRegion = null;
         this.selectedLocation = null;
-        
-        // Define regions and their locations
-        this.regions = {
-            'CWFAJK': {
-                name: 'SE Inner Coastal Waters',
-                locations: [
-                    'Glacier Bay',
-                    'Northern Lynn Canal',
-                    'Southern Lynn Canal',
-                    'Icy Strait',
-                    'Cross Sound',
-                    'Stephens Passage',
-                    'Northern Chatham Strait',
-                    'Southern Chatham Strait',
-                    'Frederick Sound',
-                    'Sumner Strait',
-                    'Clarence Strait'
-                ]
-            },
-            'CWFAEG': {
-                name: 'SE Outside Coastal Waters',
-                locations: [
-                    'Dixon Entrance to Cape Decision',
-                    'Cape Decision to Cape Edgecumbe',
-                    'Cape Edgecumbe to Cape Spencer',
-                    'Cape Spencer to Cape Fairweather',
-                    'Cape Fairweather to Icy Cape',
-                    'Icy Cape to Cape Suckling'
-                ]
-            },
-            'CWFYAK': {
-                name: 'Yakutat Bay',
-                locations: [
-                    'Yakutat Bay'
-                ]
-            },
-            'CWFAER': {
-                name: 'North Gulf Coast/Kodiak/Cook Inlet',
-                locations: [
-                    'Cape Suckling to Gravel Point',
-                    'Gravel Point to Cape Cleare',
-                    'Cape Cleare to Gore Point',
-                    'Resurrection Bay',
-                    'Prince William Sound',
-                    'Port of Valdez',
-                    'Valdez Narrows',
-                    'Valdez Arm',
-                    'Passage Canal',
-                    'Barren Islands',
-                    'Kamishak Bay',
-                    'Marmot Island to Sitkinak',
-                    'Chiniak Bay',
-                    'Marmot Bay',
-                    'Shelikof Strait',
-                    'Cook Inlet',
-                    'Kachemak Bay'
-                ]
-            },
-            'CWFALU': {
-                name: 'Southwest AK/Aleutians',
-                locations: [
-                    'Sitkinak to Castle Cape',
-                    'Castle Cape to Cape Tolstoi',
-                    'Cape Tolstoi to Cape Sarichef',
-                    'Port Heiden to Nelson Lagoon',
-                    'Nelson Lagoon to Cape Sarichef',
-                    'Cape Sarichef to Nikolski',
-                    'Unalaska Bay',
-                    'Nikolski to Seguam',
-                    'Seguam to Adak'
-                ]
-            },
-            'CWFWCZ': {
-                name: 'Northwestern AK',
-                locations: [
-                    'Kotzebue Sound',
-                    'Norton Sound',
-                    'Yukon Delta',
-                    'Kuskokwim Bay',
-                    'Bristol Bay'
-                ]
-            },
-            'CWFNSB': {
-                name: 'Arctic',
-                locations: [
-                    'Beaufort Sea',
-                    'Chukchi Sea',
-                    'Arctic Ocean'
-                ]
-            }
-        };
+        this.stations = null;
         
         this.init();
     }
@@ -112,24 +22,40 @@ class CoastalForecast {
     init() {
         this.showLoading();
         this.setupEventListeners();
-        this.populateRegionDropdown();
-        this.restorePreferences();
+        this.loadStations();
+    }
+
+    /**
+     * Load stations data and populate region dropdown
+     */
+    async loadStations() {
+        try {
+            const response = await window.BoatSafe.http.get('./data/coastal-stations.json', { cacheTTL: 1440 });
+            this.stations = typeof response === 'string' ? JSON.parse(response) : response;
+            this.populateRegionDropdown();
+        } catch (error) {
+            console.error('Failed to load coastal stations:', error);
+            this.showError('Failed to load coastal stations data');
+        }
     }
 
     /**
      * Populate region dropdown
      */
     populateRegionDropdown() {
-        if (!this.regionDropdown) return;
+        if (!this.regionDropdown || !this.stations?.stations) return;
 
         this.regionDropdown.innerHTML = '<option value="">Select a region...</option>';
         
-        Object.entries(this.regions).forEach(([regionId, region]) => {
+        Object.entries(this.stations.stations).forEach(([regionId, regionName]) => {
             const option = document.createElement('option');
             option.value = regionId;
-            option.textContent = `${regionId} - ${region.name}`;
+            option.textContent = `${regionId} - ${regionName}`;
             this.regionDropdown.appendChild(option);
         });
+        
+        // Restore saved region if available
+        this.restorePreferences();
     }
 
     /**
@@ -138,19 +64,14 @@ class CoastalForecast {
     populateLocationDropdown() {
         if (!this.locationDropdown || !this.currentRegion) return;
 
-        // Clear existing options
-        this.locationDropdown.innerHTML = '<option value="">Select a location...</option>';
-
-        // Add locations for current region
-        const region = this.regions[this.currentRegion];
-        if (region && region.locations) {
-            region.locations.forEach(location => {
-                const option = document.createElement('option');
-                option.value = location;
-                option.textContent = location;
-                this.locationDropdown.appendChild(option);
-            });
-        }
+        // For coastal forecasts, we show the complete forecast for the region
+        // rather than individual locations, so we simplify this dropdown
+        this.locationDropdown.innerHTML = '<option value="">View complete forecast</option>';
+        const option = document.createElement('option');
+        option.value = 'complete';
+        option.textContent = 'Complete Regional Forecast';
+        option.selected = true;
+        this.locationDropdown.appendChild(option);
     }
 
     /**
@@ -173,11 +94,11 @@ class CoastalForecast {
     }
 
     /**
-     * Select a region and load its forecast
+     * Select a region and populate location dropdown
      * @param {string} regionId - Region ID
      */
-    async selectRegion(regionId) {
-        if (!regionId || !this.regions[regionId]) {
+    selectRegion(regionId) {
+        if (!regionId || !this.stations?.stations[regionId]) {
             this.locationDropdown.innerHTML = '<option value="">Select a region first...</option>';
             this.showLoading('Select a region to view forecast');
             return;
@@ -185,7 +106,30 @@ class CoastalForecast {
 
         this.currentRegion = regionId;
         this.populateLocationDropdown();
-        this.showLoading(`Loading forecast for ${this.regions[regionId].name}...`);
+        
+        // Save region preference
+        try {
+            localStorage.setItem('boatsafe_coastal_region', regionId);
+        } catch (error) {
+            console.warn('Failed to save region preference:', error);
+        }
+        
+        // Auto-select complete forecast
+        this.selectLocation('complete');
+    }
+
+    /**
+     * Select and display forecast for region
+     * @param {string} location - Location name to display (simplified for coastal forecasts)
+     */
+    async selectLocation(location) {
+        if (!location || !this.currentRegion) {
+            this.showLoading('Select a region to view forecast');
+            return;
+        }
+
+        this.selectedLocation = location;
+        this.showLoading(`Loading coastal forecast for ${this.currentRegion}...`);
         
         try {
             // Fetch forecast data for this region
@@ -195,27 +139,24 @@ class CoastalForecast {
             let data;
             if (isLocal) {
                 // Local development - show placeholder
+                const regionName = this.stations.stations[this.currentRegion];
                 data = {
-                    regionId: regionId,
-                    regionName: this.regions[regionId].name,
+                    regionId: this.currentRegion,
+                    regionName: regionName,
                     properties: {
                         updated: new Date().toISOString(),
-                        fullText: `LOCAL DEVELOPMENT MODE\n\nCoastal forecast for ${this.regions[regionId].name} would appear here.\n\nDeploy to Netlify to see real coastal forecast data.`,
-                        locations: this.regions[regionId].locations.map(loc => ({
-                            name: loc,
-                            forecast: []
-                        })),
+                        fullText: `LOCAL DEVELOPMENT MODE\n\nCoastal forecast for ${regionName} (${this.currentRegion}) would appear here.\n\nDeploy to Netlify to see real coastal forecast data.`,
                         periods: [{
                             name: 'Coastal Forecast',
-                            detailedForecast: `LOCAL DEVELOPMENT MODE\n\nCoastal forecast for ${this.regions[regionId].name} would appear here.\n\nDeploy to Netlify to see real coastal forecast data.`,
-                            shortForecast: `Local dev mode - ${regionId}`
+                            detailedForecast: `LOCAL DEVELOPMENT MODE\n\nCoastal forecast for ${regionName} (${this.currentRegion}) would appear here.\n\nDeploy to Netlify to see real coastal forecast data.`,
+                            shortForecast: `Local dev mode - ${this.currentRegion}`
                         }]
                     }
                 };
             } else {
                 // Production - use Netlify function
-                const proxyUrl = `${currentHost}/.netlify/functions/coastal-forecast/${regionId}`;
-                console.log(`Fetching coastal forecast for ${regionId} from:`, proxyUrl);
+                const proxyUrl = `${currentHost}/.netlify/functions/coastal-forecast/${this.currentRegion}`;
+                console.log(`Fetching coastal forecast for ${this.currentRegion} from:`, proxyUrl);
                 const response = await fetch(proxyUrl);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -229,39 +170,18 @@ class CoastalForecast {
                 this.currentData = data;
                 this.renderRegionForecast();
                 
-                // Save region preference
+                // Save location preference
                 try {
-                    localStorage.setItem('boatsafe_coastal_region', regionId);
+                    localStorage.setItem('boatsafe_coastal_location', location);
                 } catch (error) {
-                    console.warn('Failed to save region preference:', error);
+                    console.warn('Failed to save location preference:', error);
                 }
             } else {
                 throw new Error('No forecast data received - invalid response structure');
             }
         } catch (error) {
             console.error('Failed to load coastal forecast:', error);
-            this.showError(`Failed to load forecast for ${regionId}: ${error.message}`);
-        }
-    }
-
-    /**
-     * Select and display specific location forecast
-     * @param {string} location - Location name to display
-     */
-    selectLocation(location) {
-        if (!location || !this.currentData) {
-            this.renderRegionForecast();
-            return;
-        }
-
-        this.selectedLocation = location;
-        this.renderLocationForecast(location);
-        
-        // Save location preference
-        try {
-            localStorage.setItem('boatsafe_coastal_location', location);
-        } catch (error) {
-            console.warn('Failed to save location preference:', error);
+            this.showError(`Failed to load coastal forecast for ${this.currentRegion}: ${error.message}`);
         }
     }
 
@@ -277,11 +197,16 @@ class CoastalForecast {
         const regionName = this.currentData.regionName || this.currentRegion;
         const fullText = this.currentData.properties.fullText || this.currentData.properties.periods[0].detailedForecast;
         
-        // Show complete forecast text for region
+        // Streamlined for low bandwidth - minimal HTML following forecast-summary pattern
         const html = `
             <div class="forecast-header">
                 <strong>${this.currentRegion} - ${regionName}</strong>
                 <small>Updated: ${this.formatDate(new Date(this.currentData.properties.updated))}</small>
+                <div class="forecast-link">
+                    <a href="https://www.weather.gov/marine/forecast#bay" target="_blank" rel="noopener">
+                        View All Alaska Coastal Forecasts →
+                    </a>
+                </div>
             </div>
             <div class="region-forecast">
                 <pre class="forecast-text">${fullText}</pre>
@@ -295,84 +220,6 @@ class CoastalForecast {
         }
     }
 
-    /**
-     * Render forecast for specific location
-     * @param {string} location - Location name
-     */
-    renderLocationForecast(location) {
-        if (!this.currentData || !this.currentData.properties) {
-            this.showError('No forecast data available');
-            return;
-        }
-
-        const fullText = this.currentData.properties.fullText || this.currentData.properties.periods[0].detailedForecast;
-        const locationForecast = this.extractLocationForecast(fullText, location);
-        
-        if (!locationForecast) {
-            this.showError(`Forecast for ${location} not found in current data`);
-            return;
-        }
-
-        const regionName = this.currentData.regionName || this.currentRegion;
-        
-        const html = `
-            <div class="forecast-header">
-                <strong>${location}</strong>
-                <small>${this.currentRegion} - ${regionName}</small>
-                <small>Updated: ${this.formatDate(new Date(this.currentData.properties.updated))}</small>
-            </div>
-            <div class="location-forecast">
-                <pre class="forecast-text">${locationForecast}</pre>
-            </div>
-        `;
-
-        if (this.forecastDisplay) {
-            this.forecastDisplay.innerHTML = html;
-        } else {
-            this.content.innerHTML = html;
-        }
-    }
-
-    /**
-     * Extract forecast text for specific location
-     * @param {string} fullText - Complete forecast text
-     * @param {string} location - Location name to extract
-     * @returns {string|null} Location-specific forecast text
-     */
-    extractLocationForecast(fullText, location) {
-        const lines = fullText.split('\n');
-        let locationStartIndex = -1;
-        let locationEndIndex = -1;
-        
-        // Find the start of the location section
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.toUpperCase().includes(location.toUpperCase()) || 
-                line.toUpperCase().includes(location.toUpperCase().replace(/\s+/g, ''))) {
-                locationStartIndex = i;
-                break;
-            }
-        }
-        
-        if (locationStartIndex === -1) {
-            return null;
-        }
-        
-        // Find the end of the location section (next location or end of text)
-        for (let i = locationStartIndex + 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.endsWith('-') && line.length > 3 && !line.includes('$$')) {
-                locationEndIndex = i;
-                break;
-            }
-        }
-        
-        if (locationEndIndex === -1) {
-            locationEndIndex = lines.length;
-        }
-        
-        return lines.slice(locationStartIndex, locationEndIndex).join('\n').trim();
-    }
 
     /**
      * Restore saved preferences
@@ -380,7 +227,7 @@ class CoastalForecast {
     restorePreferences() {
         try {
             const savedRegion = localStorage.getItem('boatsafe_coastal_region');
-            if (savedRegion && this.regions[savedRegion]) {
+            if (savedRegion && this.stations?.stations[savedRegion]) {
                 this.regionDropdown.value = savedRegion;
                 this.selectRegion(savedRegion);
                 
@@ -450,7 +297,8 @@ class CoastalForecast {
         this.currentData = null;
         this.currentRegion = null;
         this.selectedLocation = null;
-        this.showLoading('Select a region to view coastal forecast');
+        const content = this.forecastDisplay || this.content;
+        content.innerHTML = '<div class="loading">Select a region to view coastal forecast</div>';
     }
 
     /**
