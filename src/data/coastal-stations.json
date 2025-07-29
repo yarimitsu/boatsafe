@@ -1,11 +1,25 @@
 {
-  "stations": {
-    "CWFAJK": "SE Inner Coastal Waters",
-    "CWFAEG": "SE Outside Coastal Waters",
-    "CWFYAK": "Yakutat Bay",
-    "CWFAER": "North Gulf Coast, Kodiak and Cook Inlet",
-    "CWFALU": "Southwest AK and the Aleutians",
-    "CWFWCZ": "Northwestern AK",
-    "CWFNSB": "Arctic"
+  "regions": {
+    "coastal_alaska": {
+      "name": "Alaska Coastal Forecasts",
+      "zones": {
+        "AKZ317": "Northern Prince of Wales Island",
+        "AKZ318": "Central Prince of Wales Island", 
+        "AKZ319": "Southern Prince of Wales Island",
+        "AKZ320": "Misty Fjords",
+        "AKZ321": "Coastal Yakutat",
+        "AKZ322": "North Central Gulf Coast", 
+        "AKZ323": "South Central Gulf Coast",
+        "AKZ324": "Kodiak Island",
+        "AKZ325": "Alaska Peninsula Coast",
+        "AKZ326": "Bristol Bay Coast",
+        "AKZ327": "Lower Kuskokwim Valley",
+        "AKZ328": "Middle Kuskokwim Valley",
+        "AKZ329": "Upper Kuskokwim Valley",
+        "AKZ330": "Western Alaska Coast",
+        "AKZ331": "Northwest Arctic Coast",
+        "AKZ332": "North Slope Coast"
+      }
+    }
   }
 }

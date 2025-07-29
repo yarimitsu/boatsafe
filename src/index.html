@@ -62,9 +62,14 @@
                     <div id="forecast-summary" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Marine Forecast
+                            <span class="header-title">Marine Forecast</span>
+                            <button class="toggle-button" id="forecast-toggle" aria-expanded="true" aria-controls="forecast-content">
+                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
                         </h2>
-                        <div class="forecast-content">
+                        <div class="forecast-content collapsible-content" id="forecast-content">
                             <div class="zone-selector">
                                 <label for="region-dropdown" class="dropdown-label">Select region:</label>
                                 <select id="region-dropdown" class="region-dropdown">
@@ -87,9 +92,14 @@
                     <div id="observations" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            SEAK Marine Observations
+                            <span class="header-title">SEAK Marine Observations</span>
+                            <button class="toggle-button" id="observations-toggle" aria-expanded="true" aria-controls="observations-content">
+                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
                         </h2>
-                        <div class="observations-content">
+                        <div class="observations-content collapsible-content" id="observations-content">
                             <div class="station-selector">
                                 <label for="station-dropdown" class="dropdown-label">Select observation station:</label>
                                 <select id="station-dropdown" class="station-dropdown">
@@ -108,9 +118,14 @@
                     <div id="tides-currents" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Tides & Currents
+                            <span class="header-title">Tides & Currents</span>
+                            <button class="toggle-button" id="tides-toggle" aria-expanded="true" aria-controls="tides-currents-content">
+                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
                         </h2>
-                        <div class="tides-currents-content">
+                        <div class="tides-currents-content collapsible-content" id="tides-currents-content">
                             <!-- Date Navigation -->
                             <div class="date-navigation">
                                 <!-- Navigation will be inserted here by JavaScript -->
@@ -150,26 +165,6 @@
                     </div>
                 </section>
 
-                <!-- Currents Widget -->
-                <section class="widget-container">
-                    <div id="currents" class="widget">
-                        <h2 class="widget-header">
-                            <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Currents
-                        </h2>
-                        <div class="currents-content">
-                            <div class="current-location-selector">
-                                <label for="standalone-current-station-dropdown" class="dropdown-label">Select current station:</label>
-                                <select id="standalone-current-station-dropdown" class="station-dropdown">
-                                    <option value="">Select a station...</option>
-                                </select>
-                            </div>
-                            <div class="current-data-container">
-                                <div class="loading">Select a current station to view data</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 <!-- Forecaster Discussion -->
                 <section class="widget-container">
@@ -204,9 +199,14 @@
                     <div id="weather" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Weather Warnings & Advisories
+                            <span class="header-title">Weather Warnings & Advisories</span>
+                            <button class="toggle-button" id="weather-toggle" aria-expanded="true" aria-controls="weather-content">
+                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
                         </h2>
-                        <div class="weather-content">
+                        <div class="weather-content collapsible-content" id="weather-content">
                             <div class="loading">Loading weather warnings...</div>
                         </div>
                     </div>
@@ -217,9 +217,14 @@
                     <div id="coastal-forecast" class="widget">
                         <h2 class="widget-header">
                             <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            Coastal Forecasts
+                            <span class="header-title">Coastal Forecasts</span>
+                            <button class="toggle-button" id="coastal-toggle" aria-expanded="true" aria-controls="coastal-forecast-content">
+                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
                         </h2>
-                        <div class="coastal-forecast-content">
+                        <div class="coastal-forecast-content collapsible-content" id="coastal-forecast-content">
                             <div class="coastal-selector">
                                 <label for="coastal-region-dropdown" class="dropdown-label">Select forecast region:</label>
                                 <select id="coastal-region-dropdown" class="region-dropdown">
@@ -271,7 +276,6 @@
     <script src="js/widgets/discussion.js"></script>
     <script src="js/widgets/coastal-forecast.js"></script>
     <script src="js/widgets/tides-currents.js"></script>
-    <script src="js/widgets/currents.js"></script>
     <script src="js/widgets/seak-observations.js"></script>
     <script src="js/widgets/weather.js"></script>
     <script src="js/app.js"></script>

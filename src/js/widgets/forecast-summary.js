@@ -5,6 +5,7 @@ class ForecastSummary {
     constructor() {
         this.container = document.getElementById('forecast-summary');
         this.content = this.container.querySelector('.forecast-content');
+        this.toggleButton = document.getElementById('forecast-toggle');
         this.regionDropdown = document.getElementById('region-dropdown');
         this.zoneDropdown = document.getElementById('zone-dropdown');
         this.forecastDisplay = this.container.querySelector('.forecast-display');
@@ -12,6 +13,7 @@ class ForecastSummary {
         this.currentRegion = null;
         this.selectedZone = null;
         this.zones = null;
+        this.isExpanded = true; // Default to expanded
         
         this.init();
     }
@@ -20,9 +22,65 @@ class ForecastSummary {
      * Initialize the widget
      */
     init() {
+        this.setupToggleButton();
         this.showLoading();
         this.setupEventListeners();
         this.loadZones();
+    }
+
+    /**
+     * Setup toggle button functionality
+     */
+    setupToggleButton() {
+        if (!this.toggleButton) return;
+        
+        this.toggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleWidget();
+        });
+    }
+
+    /**
+     * Toggle widget visibility
+     */
+    toggleWidget() {
+        if (this.isExpanded) {
+            this.collapseWidget();
+        } else {
+            this.expandWidget();
+        }
+    }
+
+    /**
+     * Expand widget content
+     */
+    expandWidget() {
+        this.content.style.display = 'block';
+        this.content.classList.add('expanding');
+        this.isExpanded = true;
+        
+        this.toggleButton.setAttribute('aria-expanded', 'true');
+        this.toggleButton.querySelector('.chevron-icon').classList.add('expanded');
+        
+        setTimeout(() => {
+            this.content.classList.remove('expanding');
+        }, 300);
+    }
+
+    /**
+     * Collapse widget content
+     */
+    collapseWidget() {
+        this.content.classList.add('collapsing');
+        this.isExpanded = false;
+        
+        this.toggleButton.setAttribute('aria-expanded', 'false');
+        this.toggleButton.querySelector('.chevron-icon').classList.remove('expanded');
+        
+        setTimeout(() => {
+            this.content.style.display = 'none';
+            this.content.classList.remove('collapsing');
+        }, 300);
     }
 
     /**
@@ -405,7 +463,10 @@ class ForecastSummary {
         const html = `
             <div class="forecast-header">
                 <strong>${zoneId} - ${zoneName}</strong>
-                <small>Updated: ${this.formatDate(new Date(this.currentData.properties.updated))}</small>
+                <div class="forecast-meta">
+                    <small>NOAA Update: ${this.formatDate(new Date(this.currentData.properties.updated))}</small>
+                    <a href="https://www.weather.gov/marine/forecast#akcwf" target="_blank" rel="noopener" class="noaa-link">View NOAA Dataset →</a>
+                </div>
             </div>
             <div class="zone-forecast">
                 <pre class="forecast-text">${zoneForecast}</pre>

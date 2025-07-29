@@ -248,7 +248,10 @@ class Discussion {
             <div class="forecast-period">
                 <div class="period-header">
                     <strong>Forecast Discussion - ${officeName || this.getOfficeName(office)}</strong>
-                    <span class="period-time">${issuedTime || this.formatDate(new Date(updated))}</span>
+                    <div class="discussion-meta">
+                        <span class="period-time">NOAA Update: ${issuedTime || this.formatDate(new Date(updated))}</span>
+                        <a href="https://www.weather.gov/ajk/MarineForecasts" target="_blank" rel="noopener" class="noaa-link">View NOAA Dataset →</a>
+                    </div>
                 </div>
                 <div class="forecast-text">
                     ${this.formatText(text)}

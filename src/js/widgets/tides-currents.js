@@ -33,10 +33,21 @@ class TidesCurrents {
      * Initialize the widget
      */
     async init() {
-        await this.loadStations();
-        this.populateDropdowns();
-        this.setupEventListeners();
-        this.renderDateNavigation();
+        // Show "coming soon" message instead of loading functionality
+        this.showComingSoon();
+    }
+
+    /**
+     * Show coming soon message
+     */
+    showComingSoon() {
+        this.content.innerHTML = `
+            <div class="coming-soon-message">
+                <h3>Tides & Currents</h3>
+                <p>This feature is currently being updated and will be available soon.</p>
+                <p>Check back later for detailed tide predictions and current data for Alaska waters.</p>
+            </div>
+        `;
     }
 
     /**

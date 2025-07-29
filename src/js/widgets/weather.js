@@ -6,7 +6,9 @@ class WeatherWidget {
     constructor() {
         this.container = document.getElementById('weather');
         this.content = this.container.querySelector('.weather-content');
+        this.toggleButton = document.getElementById('weather-toggle');
         this.currentData = null;
+        this.isExpanded = true; // Default to expanded
         
         this.init();
     }
@@ -15,6 +17,7 @@ class WeatherWidget {
      * Initialize the widget
      */
     init() {
+        this.setupToggleButton();
         this.showLoading();
         this.loadWarnings();
         
@@ -22,6 +25,61 @@ class WeatherWidget {
         setInterval(() => {
             this.loadWarnings();
         }, 15 * 60 * 1000);
+    }
+
+    /**
+     * Setup toggle button functionality
+     */
+    setupToggleButton() {
+        if (!this.toggleButton) return;
+        
+        this.toggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggleWidget();
+        });
+    }
+
+    /**
+     * Toggle widget visibility
+     */
+    toggleWidget() {
+        if (this.isExpanded) {
+            this.collapseWidget();
+        } else {
+            this.expandWidget();
+        }
+    }
+
+    /**
+     * Expand widget content
+     */
+    expandWidget() {
+        this.content.style.display = 'block';
+        this.content.classList.add('expanding');
+        this.isExpanded = true;
+        
+        this.toggleButton.setAttribute('aria-expanded', 'true');
+        this.toggleButton.querySelector('.chevron-icon').classList.add('expanded');
+        
+        setTimeout(() => {
+            this.content.classList.remove('expanding');
+        }, 300);
+    }
+
+    /**
+     * Collapse widget content
+     */
+    collapseWidget() {
+        this.content.classList.add('collapsing');
+        this.isExpanded = false;
+        
+        this.toggleButton.setAttribute('aria-expanded', 'false');
+        this.toggleButton.querySelector('.chevron-icon').classList.remove('expanded');
+        
+        setTimeout(() => {
+            this.content.style.display = 'none';
+            this.content.classList.remove('collapsing');
+        }, 300);
     }
 
     /**
@@ -90,10 +148,10 @@ class WeatherWidget {
             <div class="warnings-header">
                 <div class="office-info">
                     <strong>${officeName}</strong>
-                    <span class="last-updated">Last updated: ${this.formatDate(new Date(updated))}</span>
-                </div>
-                <div class="refresh-info">
-                    <small>Auto-refreshes every 15 minutes</small>
+                    <div class="warning-meta">
+                        <span class="last-updated">NOAA Update: ${this.formatDate(new Date(updated))}</span>
+                        <a href="https://www.weather.gov/ajk/MarineAdvisories" target="_blank" rel="noopener" class="noaa-link">View NOAA Dataset →</a>
+                    </div>
                 </div>
             </div>
         `;
@@ -304,7 +362,6 @@ class WeatherWidget {
                     <li>Special Weather Statements</li>
                     <li>Hazardous Weather Outlook</li>
                     <li>Area Forecast Discussion</li>
-                    <li>Short Term Forecast</li>
                 </ul>
             </div>
         `;

@@ -6,11 +6,13 @@ class SEAKObservations {
     constructor() {
         this.container = document.getElementById('observations');
         this.content = this.container.querySelector('.observations-content');
+        this.toggleButton = document.getElementById('observations-toggle');
         this.stationDropdown = document.getElementById('station-dropdown');
         this.observationsDisplay = this.container.querySelector('.observations-display');
         this.currentData = null;
         this.selectedStation = null;
         this.stations = null;
+        this.isExpanded = true; // Default to expanded
         
         this.init();
     }
@@ -36,7 +38,7 @@ class SEAKObservations {
             // Restore saved station if available
             try {
                 const savedStation = localStorage.getItem('boatsafe_selected_seak_station');
-                if (savedStation && this.stations.stations[savedStation]) {
+                if (savedStation && this.stationExists(savedStation)) {
                     this.stationDropdown.value = savedStation;
                     this.selectStation(savedStation);
                 }
@@ -49,19 +51,65 @@ class SEAKObservations {
     }
 
     /**
-     * Populate station dropdown
+     * Populate station dropdown with regional subheadings
      */
     populateStationDropdown() {
-        if (!this.stationDropdown || !this.stations?.stations) return;
+        if (!this.stationDropdown || !this.stations?.regions) return;
 
         this.stationDropdown.innerHTML = '<option value="">Select a station...</option>';
         
-        Object.entries(this.stations.stations).forEach(([stationId, stationName]) => {
-            const option = document.createElement('option');
-            option.value = stationId;
-            option.textContent = `${stationId} - ${stationName}`;
-            this.stationDropdown.appendChild(option);
+        // Add regional subheadings and stations
+        Object.entries(this.stations.regions).forEach(([regionName, stations]) => {
+            // Add region header as disabled option
+            const regionHeader = document.createElement('option');
+            regionHeader.value = '';
+            regionHeader.textContent = `--- ${regionName} ---`;
+            regionHeader.disabled = true;
+            regionHeader.style.fontWeight = 'bold';
+            regionHeader.style.backgroundColor = '#f0f0f0';
+            this.stationDropdown.appendChild(regionHeader);
+            
+            // Add stations in this region
+            Object.entries(stations).forEach(([stationId, stationName]) => {
+                const option = document.createElement('option');
+                option.value = stationId;
+                option.textContent = `  ${stationId} - ${stationName}`;
+                option.style.paddingLeft = '20px';
+                this.stationDropdown.appendChild(option);
+            });
         });
+    }
+
+    /**
+     * Get station name from regional structure
+     * @param {string} stationId - Station ID to look up
+     * @returns {string} Station name or ID if not found
+     */
+    getStationName(stationId) {
+        if (!this.stations?.regions) return stationId;
+        
+        for (const region of Object.values(this.stations.regions)) {
+            if (region[stationId]) {
+                return region[stationId];
+            }
+        }
+        return stationId;
+    }
+
+    /**
+     * Check if station exists in regional structure
+     * @param {string} stationId - Station ID to check
+     * @returns {boolean} True if station exists
+     */
+    stationExists(stationId) {
+        if (!this.stations?.regions) return false;
+        
+        for (const region of Object.values(this.stations.regions)) {
+            if (region[stationId]) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -159,7 +207,7 @@ class SEAKObservations {
      */
     renderStationObservations(stationData, timestamp) {
         const stationId = stationData.stationId || stationData.stn;
-        const stationName = this.stations.stations[stationId] || stationData.stationName || stationData.stnName || stationId;
+        const stationName = this.getStationName(stationId) || stationData.stationName || stationData.stnName || stationId;
         
         let observationLines = [];
         
@@ -222,7 +270,7 @@ class SEAKObservations {
             <div class="forecast-period">
                 <div class="period-header">
                     <strong>${stationName}</strong>
-                    <span class="period-time">${this.formatDate(timestamp)}</span>
+                    <span class="period-time">NOAA Update: ${this.formatDate(timestamp)}</span>
                 </div>
                 <div class="forecast-text observation-data">
                     ${observationLines.length > 0 ? observationLines.join('') : '<div class="observation-line">No current observation data available for this station</div>'}
@@ -244,7 +292,7 @@ class SEAKObservations {
      * Show local development placeholder
      */
     showLocalDevPlaceholder(stationId) {
-        const stationName = this.stations.stations[stationId] || stationId;
+        const stationName = this.getStationName(stationId);
         
         const html = `
             <div class="forecast-period">
