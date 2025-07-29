@@ -1178,17 +1178,16 @@
 }
 
 /* SEAK Observations dropdown option styling */
-.station-dropdown .dropdown-header {
+#station-dropdown option[disabled] {
     font-weight: 600;
-    color: var(--text-secondary);
-    background-color: var(--background-secondary);
     font-style: italic;
+    color: var(--text-secondary) !important;
+    background-color: var(--deep-ice) !important;
 }
 
-.station-dropdown .dropdown-option-indented {
-    padding-left: var(--spacing-4);
-    color: var(--text-primary);
-    background-color: var(--glass-bg);
+#station-dropdown option:not([disabled]) {
+    color: var(--text-primary) !important;
+    background-color: var(--glass-bg) !important;
 }
 
 .observations-display {
