@@ -3,27 +3,23 @@
  * Security-first proxy for NOAA Coastal Forecast API
  */
 
-// Valid Alaska coastal forecast regions - security whitelist
-const VALID_REGIONS = new Set([
-  'CWFAJK', // SE Inner Coastal Waters
-  'CWFAEG', // SE Outside Coastal Waters
-  'CWFYAK', // Yakutat Bay
-  'CWFAER', // North Gulf Coast/Kodiak/Cook Inlet
-  'CWFALU', // Southwest AK/Aleutians
-  'CWFWCZ', // Northwestern AK
-  'CWFNSB'  // Arctic
+// Valid Alaska coastal forecast zones - security whitelist
+const VALID_ZONES = new Set([
+  'AKZ317', 'AKZ318', 'AKZ319', 'AKZ320', 'AKZ321', 'AKZ322', 
+  'AKZ323', 'AKZ324', 'AKZ325', 'AKZ326', 'AKZ327', 'AKZ328', 
+  'AKZ329', 'AKZ330', 'AKZ331', 'AKZ332'
 ]);
 
 // Rate limiting store (in-memory for simplicity)
 const rateLimitStore = new Map();
 
-function validateRegionId(regionId) {
-  if (!regionId || typeof regionId !== 'string') {
+function validateZoneId(zoneId) {
+  if (!zoneId || typeof zoneId !== 'string') {
     return false;
   }
   
-  const upperRegionId = regionId.toUpperCase();
-  return VALID_REGIONS.has(upperRegionId);
+  const upperZoneId = zoneId.toUpperCase();
+  return VALID_ZONES.has(upperZoneId);
 }
 
 function checkRateLimit(ip) {
@@ -59,127 +55,72 @@ function getClientIp(event) {
          '127.0.0.1';
 }
 
-// Region to forecast URL mapping
-const REGION_TO_FORECAST_URL = {
-  'CWFAJK': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-  'CWFAEG': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-  'CWFYAK': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak53.pajk.cwf.yak.txt',
-  'CWFAER': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-  'CWFALU': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-  'CWFWCZ': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafg.cwf.wcz.txt',
-  'CWFNSB': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafg.cwf.nsb.txt'
+// NOAA Weather API base URL for zone forecasts
+const NOAA_API_BASE = 'https://api.weather.gov/zones/forecast';
+
+// Zone names mapping
+const ZONE_NAMES = {
+  'AKZ317': 'Northern Prince of Wales Island',
+  'AKZ318': 'Central Prince of Wales Island', 
+  'AKZ319': 'Southern Prince of Wales Island',
+  'AKZ320': 'Misty Fjords',
+  'AKZ321': 'Coastal Yakutat',
+  'AKZ322': 'North Central Gulf Coast', 
+  'AKZ323': 'South Central Gulf Coast',
+  'AKZ324': 'Kodiak Island',
+  'AKZ325': 'Alaska Peninsula Coast',
+  'AKZ326': 'Bristol Bay Coast',
+  'AKZ327': 'Lower Kuskokwim Valley',
+  'AKZ328': 'Middle Kuskokwim Valley',
+  'AKZ329': 'Upper Kuskokwim Valley',
+  'AKZ330': 'Western Alaska Coast',
+  'AKZ331': 'Northwest Arctic Coast',
+  'AKZ332': 'North Slope Coast'
 };
 
-// Region names mapping
-const REGION_NAMES = {
-  'CWFAJK': 'SE Inner Coastal Waters',
-  'CWFAEG': 'SE Outside Coastal Waters',
-  'CWFYAK': 'Yakutat Bay',
-  'CWFAER': 'North Gulf Coast/Kodiak/Cook Inlet',
-  'CWFALU': 'Southwest AK/Aleutians',
-  'CWFWCZ': 'Northwestern AK',
-  'CWFNSB': 'Arctic'
-};
-
-async function fetchNOAACoastalData(regionId) {
-  // Get the forecast URL for this region
-  const url = REGION_TO_FORECAST_URL[regionId.toUpperCase()];
-  
-  if (!url) {
-    throw new Error(`No forecast URL found for region ${regionId}`);
-  }
+async function fetchNOAACoastalData(zoneId) {
+  const url = `${NOAA_API_BASE}/${zoneId}/forecast`;
   
   try {
-    console.log(`Fetching coastal forecast from: ${url}`);
+    console.log(`Fetching coastal forecast from NOAA API: ${url}`);
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
+        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
+        'Accept': 'application/json'
       }
     });
     
     console.log(`Response status: ${response.status}`);
     
     if (response.ok) {
-      const text = await response.text();
-      console.log(`Got coastal forecast text (${text.length} chars)`);
+      const data = await response.json();
+      console.log(`Got coastal forecast data for ${zoneId}`);
       
-      // Extract issued time from forecast text
-      let issuedTime = null;
-      const issuedMatch = text.match(/ISSUED.*?(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST).*?)/i) ||
-                         text.match(/(\d{1,2}\/\d{1,2}\/\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i);
-      if (issuedMatch) {
-        issuedTime = issuedMatch[1] || issuedMatch[0];
+      // NOAA API returns data in a different format than the raw text
+      if (data.properties && data.properties.periods) {
+        return {
+          properties: {
+            updated: data.properties.updated || new Date().toISOString(),
+            periods: data.properties.periods.map(period => ({
+              name: period.name || 'Coastal Forecast',
+              detailedForecast: period.detailedForecast || period.forecast || 'No detailed forecast available',
+              shortForecast: period.shortForecast || `Coastal conditions for ${ZONE_NAMES[zoneId.toUpperCase()]}`
+            }))
+          }
+        };
+      } else {
+        throw new Error('Invalid response structure from NOAA API');
       }
-      
-      // Parse locations from the forecast text
-      const locations = parseCoastalForecastLocations(text);
-      
-      // Convert to JSON format
-      return {
-        regionId: regionId.toUpperCase(),
-        regionName: REGION_NAMES[regionId.toUpperCase()],
-        properties: {
-          updated: new Date().toISOString(),
-          issued: issuedTime ? issuedTime : new Date().toISOString(),
-          fullText: text,
-          locations: locations,
-          periods: [{
-            name: 'Coastal Forecast',
-            detailedForecast: text,
-            shortForecast: 'Coastal conditions for ' + REGION_NAMES[regionId.toUpperCase()],
-            issueTime: issuedTime
-          }]
-        }
-      };
     } else {
       console.log(`Failed ${response.status}: ${response.statusText}`);
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
     console.error(`Failed to fetch from ${url}:`, error.message);
-    throw new Error('Unable to fetch coastal forecast data from NOAA');
+    throw new Error('Unable to fetch coastal forecast data from NOAA API');
   }
 }
 
-function parseCoastalForecastLocations(text) {
-  const locations = [];
-  const lines = text.split('\n');
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Look for location headers (usually in format like "LOCATION NAME-" or specific patterns)
-    if (line.endsWith('-') && line.length > 3 && !line.includes('$$')) {
-      const locationName = line.replace('-', '').trim();
-      
-      // Look for forecast periods for this location
-      const locationForecast = [];
-      let j = i + 1;
-      
-      while (j < lines.length && !lines[j].endsWith('-') && !lines[j].includes('$$')) {
-        const forecastLine = lines[j].trim();
-        if (forecastLine && forecastLine.startsWith('.')) {
-          // This is a forecast period
-          const periodName = forecastLine.replace(/^\./, '').replace(/\.\.\.$/, '').trim();
-          locationForecast.push({
-            name: periodName,
-            text: forecastLine
-          });
-        }
-        j++;
-      }
-      
-      if (locationForecast.length > 0) {
-        locations.push({
-          name: locationName,
-          forecast: locationForecast
-        });
-      }
-    }
-  }
-  
-  return locations;
-}
 
 exports.handler = async (event, context) => {
   console.log('Coastal forecast function called with:', {
@@ -232,11 +173,11 @@ exports.handler = async (event, context) => {
       };
     }
     
-    // Extract region ID from path
-    console.log('Extracting region ID from path:', event.path);
+    // Extract zone ID from path
+    console.log('Extracting zone ID from path:', event.path);
     const pathMatch = event.path.match(/\/coastal-forecast\/([^\/]+)/);
     if (!pathMatch) {
-      console.log('No region ID found in path');
+      console.log('No zone ID found in path');
       return {
         statusCode: 400,
         headers: {
@@ -245,17 +186,17 @@ exports.handler = async (event, context) => {
         },
         body: JSON.stringify({ 
           error: 'Invalid request',
-          message: 'Region ID is required in path: /coastal-forecast/{regionId}',
+          message: 'Zone ID is required in path: /coastal-forecast/{zoneId}',
           path: event.path
         })
       };
     }
     
-    const regionId = pathMatch[1].toUpperCase();
-    console.log('Extracted region ID:', regionId);
+    const zoneId = pathMatch[1].toUpperCase();
+    console.log('Extracted zone ID:', zoneId);
     
-    // Validate region ID
-    if (!validateRegionId(regionId)) {
+    // Validate zone ID
+    if (!validateZoneId(zoneId)) {
       return {
         statusCode: 400,
         headers: {
@@ -263,14 +204,14 @@ exports.handler = async (event, context) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          error: 'Invalid region ID',
-          message: 'Region ID must be a valid Alaska coastal forecast region (CWFXXX)'
+          error: 'Invalid zone ID',
+          message: 'Zone ID must be a valid Alaska coastal forecast zone (AKZ317-AKZ332)'
         })
       };
     }
     
     // Fetch data from NOAA
-    const data = await fetchNOAACoastalData(regionId);
+    const data = await fetchNOAACoastalData(zoneId);
     
     return {
       statusCode: 200,
