@@ -55,8 +55,8 @@ function getClientIp(event) {
          '127.0.0.1';
 }
 
-// NOAA Weather API base URL for zone forecasts
-const NOAA_API_BASE = 'https://api.weather.gov/zones/forecast';
+// NOAA raw text forecast URL for Alaska Regional Headquarters land zone forecasts
+const ALASKA_LAND_FORECAST_URL = 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak61.parh.zfp.arh.txt';
 
 // Zone names mapping
 const ZONE_NAMES = {
@@ -79,48 +79,101 @@ const ZONE_NAMES = {
 };
 
 async function fetchNOAACoastalData(zoneId) {
-  const url = `${NOAA_API_BASE}/${zoneId}/forecast`;
-  
   try {
-    console.log(`Fetching coastal forecast from NOAA API: ${url}`);
-    const response = await fetch(url, {
+    console.log(`Fetching Alaska land forecast from: ${ALASKA_LAND_FORECAST_URL}`);
+    const response = await fetch(ALASKA_LAND_FORECAST_URL, {
       headers: {
-        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)',
-        'Accept': 'application/json'
+        'User-Agent': 'BoatSafe/1.0 (https://boatsafe.oceanbight.com contact@oceanbight.com)'
       }
     });
     
     console.log(`Response status: ${response.status}`);
     
     if (response.ok) {
-      const data = await response.json();
-      console.log(`Got coastal forecast data for ${zoneId}`);
+      const text = await response.text();
+      console.log(`Got Alaska forecast text (${text.length} chars)`);
       
-      // NOAA API returns data in a different format than the raw text
-      if (data.properties && data.properties.periods) {
-        return {
-          properties: {
-            updated: data.properties.updated || new Date().toISOString(),
-            periods: data.properties.periods.map(period => ({
-              name: period.name || 'Coastal Forecast',
-              detailedForecast: period.detailedForecast || period.forecast || 'No detailed forecast available',
-              shortForecast: period.shortForecast || `Coastal conditions for ${ZONE_NAMES[zoneId.toUpperCase()]}`
-            }))
-          }
-        };
-      } else {
-        throw new Error('Invalid response structure from NOAA API');
+      // Extract the specific zone forecast from the raw text
+      const zoneForecast = extractZoneFromText(text, zoneId);
+      
+      if (!zoneForecast) {
+        throw new Error(`Forecast for zone ${zoneId} not found in Alaska land forecast data`);
       }
+      
+      // Extract issued time from forecast text
+      let issuedTime = null;
+      const issuedMatch = text.match(/ISSUED.*?(\d{1,2}:\d{2}\s*(AM|PM)\s*(AKDT|AKST).*?)/i) ||
+                         text.match(/(\d{1,2}\/\d{1,2}\/\d{4}.*?\d{1,2}:\d{2}\s*(AM|PM))/i);
+      if (issuedMatch) {
+        issuedTime = issuedMatch[1] || issuedMatch[0];
+      }
+      
+      // Convert to JSON format similar to other forecast widgets
+      return {
+        properties: {
+          updated: new Date().toISOString(),
+          periods: [{
+            name: 'Coastal Forecast',
+            detailedForecast: zoneForecast,
+            shortForecast: `Coastal conditions for ${ZONE_NAMES[zoneId.toUpperCase()]}`,
+            issueTime: issuedTime
+          }]
+        }
+      };
     } else {
       console.log(`Failed ${response.status}: ${response.statusText}`);
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
-    console.error(`Failed to fetch from ${url}:`, error.message);
-    throw new Error('Unable to fetch coastal forecast data from NOAA API');
+    console.error(`Failed to fetch from ${ALASKA_LAND_FORECAST_URL}:`, error.message);
+    throw new Error('Unable to fetch Alaska land forecast data from NOAA');
   }
 }
 
+function extractZoneFromText(text, zoneId) {
+  try {
+    // Look for the zone ID in the text
+    const lines = text.split('\n');
+    let zoneStartIndex = -1;
+    let zoneEndIndex = -1;
+    
+    // Find the start of the zone section
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes(zoneId)) {
+        zoneStartIndex = i;
+        break;
+      }
+    }
+    
+    if (zoneStartIndex === -1) {
+      console.log(`Zone ${zoneId} not found in forecast text`);
+      return null;
+    }
+    
+    // Find the end of the zone section (next AKZ zone or $$)
+    for (let i = zoneStartIndex + 1; i < lines.length; i++) {
+      if (lines[i].match(/AKZ\d{3}/) || lines[i].includes('$$')) {
+        zoneEndIndex = i;
+        break;
+      }
+    }
+    
+    if (zoneEndIndex === -1) {
+      zoneEndIndex = lines.length;
+    }
+    
+    // Extract the zone forecast text
+    const zoneLines = lines.slice(zoneStartIndex, zoneEndIndex);
+    const zoneForecast = zoneLines.join('\n').trim();
+    
+    console.log(`Extracted forecast for ${zoneId} (${zoneForecast.length} chars)`);
+    return zoneForecast;
+    
+  } catch (error) {
+    console.error(`Error extracting zone ${zoneId}:`, error);
+    return null;
+  }
+}
 
 exports.handler = async (event, context) => {
   console.log('Coastal forecast function called with:', {
