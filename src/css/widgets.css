@@ -278,6 +278,57 @@
     white-space: pre-wrap;
 }
 
+/* Coastal Forecast Widget Specific Styles */
+.coastal-forecast-content .forecast-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    padding-bottom: var(--spacing-3);
+    border-bottom: var(--border-width) solid var(--gray-200);
+    margin-bottom: var(--spacing-4);
+}
+
+.coastal-forecast-content .forecast-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.coastal-forecast-content .noaa-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.coastal-forecast-content .noaa-link:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 10px var(--ice-glow);
+}
+
+.zone-forecast {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.zone-forecast .forecast-text {
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    white-space: pre-wrap;
+    hyphens: auto;
+    background: rgba(255, 255, 255, 0.05);
+    padding: var(--spacing-3);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--accent-teal);
+    margin: 0;
+}
+
 /* Location Selector Widget */
 .location-content {
     display: flex;
