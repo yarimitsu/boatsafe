@@ -10,8 +10,7 @@ const VALID_WARNING_TYPES = new Set([
   'WCN', // Weather Conditions
   'SPS', // Special Weather Statements
   'HWO', // Hazardous Weather Outlook
-  'AFD', // Area Forecast Discussion
-  'NOW'  // Short Term Forecast
+  'AFD'  // Area Forecast Discussion
 ]);
 
 // Warning type descriptions
@@ -21,8 +20,7 @@ const WARNING_TYPES = {
   'WCN': 'Weather Conditions',
   'SPS': 'Special Weather Statements',
   'HWO': 'Hazardous Weather Outlook',
-  'AFD': 'Area Forecast Discussion',
-  'NOW': 'Short Term Forecast'
+  'AFD': 'Area Forecast Discussion'
 };
 
 // Rate limiting store (in-memory)

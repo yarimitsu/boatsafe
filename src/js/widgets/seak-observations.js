@@ -65,8 +65,7 @@ class SEAKObservations {
             regionHeader.value = '';
             regionHeader.textContent = `--- ${regionName} ---`;
             regionHeader.disabled = true;
-            regionHeader.style.fontWeight = 'bold';
-            regionHeader.style.backgroundColor = '#f0f0f0';
+            regionHeader.className = 'dropdown-header';
             this.stationDropdown.appendChild(regionHeader);
             
             // Add stations in this region
@@ -74,7 +73,7 @@ class SEAKObservations {
                 const option = document.createElement('option');
                 option.value = stationId;
                 option.textContent = `  ${stationId} - ${stationName}`;
-                option.style.paddingLeft = '20px';
+                option.className = 'dropdown-option-indented';
                 this.stationDropdown.appendChild(option);
             });
         });

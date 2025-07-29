@@ -1177,6 +1177,20 @@
     border-color: var(--gray-400);
 }
 
+/* SEAK Observations dropdown option styling */
+.station-dropdown .dropdown-header {
+    font-weight: 600;
+    color: var(--text-secondary);
+    background-color: var(--background-secondary);
+    font-style: italic;
+}
+
+.station-dropdown .dropdown-option-indented {
+    padding-left: var(--spacing-4);
+    color: var(--text-primary);
+    background-color: var(--glass-bg);
+}
+
 .observations-display {
     margin-top: var(--spacing-4);
 }
