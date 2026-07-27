@@ -13,9 +13,6 @@ Live: https://boatsafe.oceanbight.com
 npm run serve      # serves src/ at http://localhost:8000
 ```
 
-Must be served over http — opening `index.html` as a file blocks the data fetches.
-No install or build needed to preview.
-
 ## Build & deploy
 
 ```
