@@ -129,24 +129,24 @@ class SEAKObservations {
     /* ---------------- NWS roundup table (wind in mph) ---------------- */
 
     renderRoundupTable(data) {
-        const rows = (data && Array.isArray(data.obData)) ? data.obData : [];
+        let rows = (data && Array.isArray(data.obData)) ? data.obData : [];
         if (rows.length === 0) return '';
 
         const updated = this.formatLocal(data.ts);
+        // The roundup also carries river/lab gauges that report almost nothing;
+        // keep only stations with an actual temperature or wind reading.
+        rows = rows.filter(r => this.clean(r.temp) !== '—' || this.clean(r.windSpd) !== '—');
         rows.sort((a, b) => String(a.stnName || a.stn).localeCompare(String(b.stnName || b.stn)));
 
         const body = rows.map(r => {
             const wind = this.windText(this.clean(r.windDir), r.windSpd);
-            const gust = this.num(r.windGust, 0);
-            const weather = this.clean(r.weather) !== '—' ? this.clean(r.weather) : this.clean(r.sky);
             return `<tr>
                 <td class="obs-site">${this.esc(r.stnName || r.stn)}</td>
                 <td>${this.num(r.temp, 0)}</td>
                 <td>${wind}</td>
-                <td>${gust}</td>
+                <td>${this.num(r.windGust, 0)}</td>
                 <td>${this.num(r.seaLevelPressure, 0)}</td>
                 <td>${this.num(r.visibility, 1)}</td>
-                <td>${this.esc(weather)}</td>
             </tr>`;
         }).join('');
 
@@ -158,7 +158,7 @@ class SEAKObservations {
                     <table class="obs-table">
                         <thead><tr>
                             <th>Station</th><th>Temp<br>&deg;F</th><th>Wind<br>mph</th>
-                            <th>Gust<br>mph</th><th>Press<br>mb</th><th>Vis<br>mi</th><th>Wx</th>
+                            <th>Gust<br>mph</th><th>Press<br>mb</th><th>Vis<br>mi</th>
                         </tr></thead>
                         <tbody>${body}</tbody>
                     </table>

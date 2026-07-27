@@ -1819,7 +1819,6 @@
     padding: var(--spacing-3);
     background: rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius);
-    border-left: 3px solid var(--warning-orange);
 }
 
 .office-info {
@@ -2344,6 +2343,12 @@
     position: sticky;
     left: 0;
     background-color: #123049;
+    /* Long roundup names (e.g. airport/river gauges) wrap within a bounded
+       column instead of stretching the whole table wide on mobile. */
+    white-space: normal;
+    max-width: 12rem;
+    min-width: 6.5rem;
+    line-height: 1.2;
 }
 .obs-table thead th:first-child {
     z-index: 2;
@@ -2413,4 +2418,99 @@
         font-size: var(--font-size-xs);
         padding: var(--spacing-1) var(--spacing-2);
     }
+}
+
+@media (max-width: 768px) {
+    /* Tighter station-name column on phones so the data columns are reachable */
+    .obs-table th:first-child,
+    .obs-table td.obs-site {
+        max-width: 9rem;
+    }
+}
+
+/* Weather alerts — collapsed summary rows, severity-colored, tap to expand */
+.weather-display {
+    margin-top: var(--spacing-3);
+}
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+.alert-item {
+    border: var(--border-width) solid var(--glass-border);
+    border-left-width: 4px;
+    border-radius: var(--border-radius);
+    background-color: rgba(15, 37, 53, 0.4);
+}
+.alert-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
+    cursor: pointer;
+    list-style: none;
+}
+.alert-summary::-webkit-details-marker { display: none; }
+.alert-caret {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+details[open] > .alert-summary .alert-caret { transform: rotate(90deg); }
+.alert-sev {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.alert-event {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.alert-area {
+    flex-basis: 100%;
+    padding-left: 1.6rem; /* align under the event, past the caret */
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+.alert-detail {
+    padding: 0 var(--spacing-3) var(--spacing-3);
+}
+.alert-when {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-2);
+}
+.alert-text {
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Severity accents. Red is reserved for above-Moderate (Severe/Extreme);
+   everything else uses the app's calm ice-blue accent — no orange/yellow. */
+.alert-item.severity-extreme,
+.alert-item.severity-severe { border-left-color: var(--error-red); }
+.alert-item.severity-moderate,
+.alert-item.severity-minor,
+.alert-item.severity-unknown { border-left-color: var(--primary-color); }
+
+.alert-item.severity-extreme .alert-sev,
+.alert-item.severity-severe .alert-sev { background-color: var(--error-red); color: #fff; }
+.alert-item.severity-moderate .alert-sev,
+.alert-item.severity-minor .alert-sev,
+.alert-item.severity-unknown .alert-sev { background-color: var(--primary-color); color: var(--button-text-dark); }
+
+/* Neutral "all clear" — deliberately no orange/red */
+.status-clear {
+    padding: var(--spacing-4);
+    text-align: center;
+    color: var(--text-secondary);
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(15, 37, 53, 0.3);
 }

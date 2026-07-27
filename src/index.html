@@ -239,7 +239,18 @@
                             </button>
                         </h2>
                         <div class="weather-content collapsible-content" id="weather-content">
-                            <div class="loading">Loading weather warnings...</div>
+                            <div class="region-selector">
+                                <label for="weather-region-dropdown" class="dropdown-label">Select region:</label>
+                                <select id="weather-region-dropdown" class="region-dropdown">
+                                    <option value="all">All Alaska</option>
+                                    <option value="southeast">Southeast Alaska</option>
+                                    <option value="southcentral">Southcentral Alaska</option>
+                                    <option value="northern">Northern Alaska</option>
+                                </select>
+                            </div>
+                            <div class="weather-display">
+                                <div class="loading">Loading weather warnings...</div>
+                            </div>
                         </div>
                     </div>
                 </section>
