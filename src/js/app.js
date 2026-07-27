@@ -32,7 +32,10 @@ class BoatSafeApp {
             
             // Set up event listeners
             this.setupEventListeners();
-            
+
+            // Reflect current connectivity (offline banner)
+            this.updateOfflineBanner();
+
             // Start update cycle
             this.startUpdateCycle();
             
@@ -114,19 +117,24 @@ class BoatSafeApp {
         // Handle online/offline events
         window.addEventListener('online', () => {
             this.showStatus('Back online', 'success');
-            if (this.currentZone) {
-                this.loadForecastData(this.currentZone);
-            }
+            this.updateOfflineBanner();
         });
 
         window.addEventListener('offline', () => {
-            this.showStatus('Offline - using cached data', 'warning');
+            this.showStatus('Offline - showing last saved data', 'warning');
+            this.updateOfflineBanner();
         });
 
         // Handle beforeunload
         window.addEventListener('beforeunload', () => {
             this.stopUpdateCycle();
         });
+    }
+
+    /** Show the offline banner whenever the device has no connectivity. */
+    updateOfflineBanner() {
+        const banner = document.getElementById('offline-banner');
+        if (banner) banner.hidden = navigator.onLine;
     }
 
     // Region/zone forecast orchestration used to live here and proxied through

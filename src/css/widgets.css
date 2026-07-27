@@ -2514,3 +2514,21 @@ details[open] > .alert-summary .alert-caret { transform: rotate(90deg); }
     border-radius: var(--border-radius);
     background-color: rgba(15, 37, 53, 0.3);
 }
+
+/* Offline notice — muted caution so cached data isn't mistaken for current */
+.offline-banner {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #3a2c14;
+    color: #ffe4b3;
+    border-bottom: 2px solid var(--warning-orange);
+    padding: var(--spacing-3) var(--spacing-4);
+    text-align: center;
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+.offline-banner::before {
+    content: '\26A0';
+    margin-right: 0.4em;
+}

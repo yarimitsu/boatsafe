@@ -6,7 +6,7 @@ class Discussion {
         this.container = document.getElementById('discussion');
         this.content = this.container.querySelector('.discussion-content');
         this.toggleButton = document.getElementById('discussion-toggle');
-        this.regionDropdown = document.getElementById('discussion-region-dropdown');
+        this.regionBtns = this.container.querySelector('.discussion-region-btns');
         this.discussionDisplay = this.container.querySelector('.discussion-display');
         this.currentData = null;
         this.currentOffice = null;
@@ -46,12 +46,20 @@ class Discussion {
      * Setup region selector
      */
     setupRegionSelector() {
-        if (!this.regionDropdown) return;
-        
-        this.regionDropdown.addEventListener('change', (e) => {
-            const selectedRegion = e.target.value;
-            this.selectRegion(selectedRegion);
+        if (!this.regionBtns) return;
+
+        this.regionBtns.addEventListener('click', (e) => {
+            const btn = e.target.closest('.map-region-btn');
+            if (!btn) return;
+            this.setActiveRegionBtn(btn.dataset.value);
+            this.selectRegion(btn.dataset.value);
         });
+    }
+
+    setActiveRegionBtn(value) {
+        if (!this.regionBtns) return;
+        this.regionBtns.querySelectorAll('.map-region-btn')
+            .forEach(b => b.classList.toggle('active', b.dataset.value === value));
     }
 
     /**
@@ -128,9 +136,9 @@ class Discussion {
     loadSavedPreferences() {
         try {
             const savedRegion = localStorage.getItem('boatsafe_discussion_region');
-            if (savedRegion && this.regionDropdown) {
-                this.regionDropdown.value = savedRegion;
+            if (savedRegion) {
                 this.currentOffice = savedRegion;
+                this.setActiveRegionBtn(savedRegion);
             }
         } catch (error) {
             console.warn('Failed to load saved preferences:', error);

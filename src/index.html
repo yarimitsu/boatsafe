@@ -43,6 +43,11 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Offline notice: shown when the device is offline so cached data is never mistaken for current -->
+        <div id="offline-banner" class="offline-banner" role="status" hidden>
+            You're offline &mdash; showing the last saved data, which may be out of date. Check the update time shown in each section.
+        </div>
+
         <!-- Header -->
         <header class="app-header">
             <div class="container">
@@ -71,10 +76,8 @@
                         </h2>
                         <div class="forecast-content collapsible-content" id="forecast-content">
                             <div class="zone-selector">
-                                <label for="region-dropdown" class="dropdown-label">Select region:</label>
-                                <select id="region-dropdown" class="region-dropdown">
-                                    <option value="">Select a region...</option>
-                                </select>
+                                <span class="dropdown-label">Select region:</span>
+                                <div class="map-controls marine-region-btns" role="group" aria-label="Select region"></div>
                                 <label for="zone-dropdown" class="dropdown-label">Select zone:</label>
                                 <select id="zone-dropdown" class="zone-dropdown">
                                     <option value="">Select a region first...</option>
@@ -120,14 +123,10 @@
                             </button>
                         </h2>
                         <div class="tides-currents-content collapsible-content" id="tides-currents-content">
-                            <!-- Date Navigation -->
-                            <div class="date-navigation">
-                                <!-- Navigation will be inserted here by JavaScript -->
-                            </div>
-
                             <!-- Tides -->
                             <div class="tc-section">
                                 <h3 class="section-title">Tides</h3>
+                                <div class="tide-date-navigation"></div>
                                 <div class="map-controls tide-map-controls" role="group" aria-label="Zoom tide map to region">
                                     <button class="map-region-btn active" data-region="all">All Alaska</button>
                                     <button class="map-region-btn" data-region="se">Southeast</button>
@@ -150,6 +149,7 @@
                             <!-- Currents -->
                             <div class="tc-section">
                                 <h3 class="section-title">Currents</h3>
+                                <div class="current-date-navigation"></div>
                                 <div class="map-controls current-map-controls" role="group" aria-label="Zoom current map to region">
                                     <button class="map-region-btn active" data-region="all">All Alaska</button>
                                     <button class="map-region-btn" data-region="se">Southeast</button>
@@ -186,10 +186,8 @@
                         </h2>
                         <div class="coastal-forecast-content collapsible-content" id="coastal-forecast-content">
                             <div class="coastal-selector">
-                                <label for="coastal-location-dropdown" class="dropdown-label">Select location:</label>
-                                <select id="coastal-location-dropdown" class="location-dropdown">
-                                    <option value="">Select a location...</option>
-                                </select>
+                                <span class="dropdown-label">Select location:</span>
+                                <div class="map-controls coastal-location-btns" role="group" aria-label="Select location"></div>
                             </div>
                             <div class="coastal-forecast-display">
                                 <div class="loading">Select a region to view coastal forecast</div>
@@ -211,13 +209,10 @@
                             </button>
                         </h2>
                         <div class="discussion-content collapsible-content" id="discussion-content" style="display: none;">
-                            <div class="region-selector">
-                                <label for="discussion-region-dropdown" class="dropdown-label">Select region:</label>
-                                <select id="discussion-region-dropdown" class="region-dropdown">
-                                    <option value="AJK">Southeast Alaska (Juneau)</option>
-                                    <option value="AFC">Southcentral Alaska (Anchorage)</option>
-                                    <option value="AFG">Northern Alaska (Fairbanks)</option>
-                                </select>
+                            <div class="map-controls discussion-region-btns" role="group" aria-label="Select region">
+                                <button class="map-region-btn active" data-value="AJK">Southeast</button>
+                                <button class="map-region-btn" data-value="AFC">Southcentral</button>
+                                <button class="map-region-btn" data-value="AFG">Northern</button>
                             </div>
                             <div class="discussion-display">
                                 <div class="loading">Loading discussion...</div>
@@ -239,14 +234,11 @@
                             </button>
                         </h2>
                         <div class="weather-content collapsible-content" id="weather-content">
-                            <div class="region-selector">
-                                <label for="weather-region-dropdown" class="dropdown-label">Select region:</label>
-                                <select id="weather-region-dropdown" class="region-dropdown">
-                                    <option value="all">All Alaska</option>
-                                    <option value="southeast">Southeast Alaska</option>
-                                    <option value="southcentral">Southcentral Alaska</option>
-                                    <option value="northern">Northern Alaska</option>
-                                </select>
+                            <div class="map-controls weather-region-btns" role="group" aria-label="Select region">
+                                <button class="map-region-btn active" data-value="all">All Alaska</button>
+                                <button class="map-region-btn" data-value="southeast">Southeast</button>
+                                <button class="map-region-btn" data-value="southcentral">Southcentral</button>
+                                <button class="map-region-btn" data-value="northern">Northern</button>
                             </div>
                             <div class="weather-display">
                                 <div class="loading">Loading weather warnings...</div>
@@ -262,12 +254,12 @@
             <div class="container">
                 <p>
                     Data provided by <a href="https://www.weather.gov" target="_blank" rel="noopener">NOAA National Weather Service</a>
-                    | <a href="https://github.com/yarimitsu/boatsafe" target="_blank" rel="noopener">Open Source</a>
                 </p>
                 <p class="disclaimer">
-                    This app is a work in progress and relies on programming help from Claude Code. 
-                    For emergency situations, always consult official NOAA marine forecasts.
+                    For emergency situations, always consult official NOAA weather forecasts.
+                    <a href="disclaimer.html">Disclaimer</a>
                 </p>
+                <p class="copyright">&copy; 2026 Ocean Bight LLC</p>
             </div>
         </footer>
     </div>

@@ -6,7 +6,7 @@ class ForecastSummary {
         this.container = document.getElementById('forecast-summary');
         this.content = this.container.querySelector('.forecast-content');
         this.toggleButton = document.getElementById('forecast-toggle');
-        this.regionDropdown = document.getElementById('region-dropdown');
+        this.regionBtns = this.container.querySelector('.marine-region-btns');
         this.zoneDropdown = document.getElementById('zone-dropdown');
         this.forecastDisplay = this.container.querySelector('.forecast-display');
         this.currentData = null;
@@ -90,7 +90,7 @@ class ForecastSummary {
         try {
             const response = await window.BoatSafe.http.get('./data/zones.json', { skipCache: true, cacheTTL: 0 });
             this.zones = typeof response === 'string' ? JSON.parse(response) : response;
-            this.populateRegionDropdown();
+            this.renderRegionButtons();
         } catch (error) {
             console.error('Failed to load zones:', error);
         }
@@ -99,26 +99,25 @@ class ForecastSummary {
     /**
      * Populate region dropdown
      */
-    populateRegionDropdown() {
-        if (!this.regionDropdown || !this.zones?.regions) return;
+    renderRegionButtons() {
+        if (!this.regionBtns || !this.zones?.regions) return;
 
-        this.regionDropdown.innerHTML = '<option value="">Select a region...</option>';
-        
+        this.regionBtns.innerHTML = '';
         Object.entries(this.zones.regions).forEach(([id, region]) => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = region.name;
-            this.regionDropdown.appendChild(option);
+            const btn = document.createElement('button');
+            btn.className = 'map-region-btn';
+            btn.dataset.value = id;
+            btn.textContent = region.name;
+            this.regionBtns.appendChild(btn);
         });
-        
-        // Restore saved region if available
+
+        // Restore saved region (and zone) if available
         try {
             const savedRegion = localStorage.getItem('boatsafe_selected_region');
             if (savedRegion && this.zones.regions[savedRegion]) {
-                this.regionDropdown.value = savedRegion;
+                this.setActiveRegionBtn(savedRegion);
                 this.selectRegion(savedRegion);
-                
-                // Also restore saved zone if available
+
                 setTimeout(() => {
                     const savedZone = localStorage.getItem('boatsafe_selected_zone');
                     if (savedZone && this.currentRegion?.zones[savedZone]) {
@@ -130,6 +129,12 @@ class ForecastSummary {
         } catch (error) {
             console.warn('Failed to restore preferences:', error);
         }
+    }
+
+    setActiveRegionBtn(value) {
+        if (!this.regionBtns) return;
+        this.regionBtns.querySelectorAll('.map-region-btn')
+            .forEach(b => b.classList.toggle('active', b.dataset.value === value));
     }
 
     /**
@@ -157,13 +162,15 @@ class ForecastSummary {
      * Set up event listeners
      */
     setupEventListeners() {
-        if (this.regionDropdown) {
-            this.regionDropdown.addEventListener('change', (e) => {
-                const regionId = e.target.value;
-                this.selectRegion(regionId);
+        if (this.regionBtns) {
+            this.regionBtns.addEventListener('click', (e) => {
+                const btn = e.target.closest('.map-region-btn');
+                if (!btn) return;
+                this.setActiveRegionBtn(btn.dataset.value);
+                this.selectRegion(btn.dataset.value);
             });
         }
-        
+
         if (this.zoneDropdown) {
             this.zoneDropdown.addEventListener('change', (e) => {
                 const zoneId = e.target.value;

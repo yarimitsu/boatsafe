@@ -5,7 +5,7 @@ class CoastalForecast {
     constructor() {
         this.container = document.getElementById('coastal-forecast');
         this.content = this.container.querySelector('.coastal-forecast-content');
-        this.locationDropdown = document.getElementById('coastal-location-dropdown');
+        this.locationBtns = this.container.querySelector('.coastal-location-btns');
         this.forecastDisplay = this.container.querySelector('.coastal-forecast-display');
         this.currentData = null;
         this.currentRegion = null;
@@ -47,14 +47,14 @@ class CoastalForecast {
         if (ids.length === 0) return;
 
         this.currentRegion = ids[0];
-        this.populateLocationDropdown();
+        this.renderLocationButtons();
         this.showLoading('Select a location to view forecast');
 
         // Restore saved location, if it's still a valid zone
         try {
             const saved = localStorage.getItem('boatsafe_coastal_location');
             if (saved && this.stations.regions[this.currentRegion].zones[saved]) {
-                this.locationDropdown.value = saved;
+                this.setActiveLocationBtn(saved);
                 this.selectLocation(saved);
             }
         } catch (error) {
@@ -63,32 +63,50 @@ class CoastalForecast {
     }
 
     /**
-     * Populate location dropdown for current region
+     * Render one button per zone (community). Labels are shortened; the full
+     * zone name stays in the button's title.
      */
-    populateLocationDropdown() {
-        if (!this.locationDropdown || !this.currentRegion) return;
+    renderLocationButtons() {
+        if (!this.locationBtns || !this.currentRegion) return;
+        this.locationBtns.innerHTML = '';
+        const zones = this.stations?.regions[this.currentRegion]?.zones || {};
+        Object.entries(zones).forEach(([zoneId, zoneName]) => {
+            const btn = document.createElement('button');
+            btn.className = 'map-region-btn';
+            btn.dataset.value = zoneId;
+            btn.textContent = this.shortName(zoneName);
+            btn.title = zoneName;
+            this.locationBtns.appendChild(btn);
+        });
+    }
 
-        // Clear existing options
-        this.locationDropdown.innerHTML = '<option value="">Select a location...</option>';
+    shortName(name) {
+        return name
+            .replace(/^City and Borough of /, '')
+            .replace(/^Municipality of /, '')
+            .replace(/^City of /, '')
+            .replace(/ Borough and Klukwan$/, '')
+            .replace(/ Gateway Borough$/, '')
+            .replace(/ Borough$/, '')
+            .trim();
+    }
 
-        // Add zones for current region
-        if (this.stations?.regions[this.currentRegion]?.zones) {
-            Object.entries(this.stations.regions[this.currentRegion].zones).forEach(([zoneId, zoneName]) => {
-                const option = document.createElement('option');
-                option.value = zoneId;
-                option.textContent = `${zoneId} - ${zoneName}`;
-                this.locationDropdown.appendChild(option);
-            });
-        }
+    setActiveLocationBtn(value) {
+        if (!this.locationBtns) return;
+        this.locationBtns.querySelectorAll('.map-region-btn')
+            .forEach(b => b.classList.toggle('active', b.dataset.value === value));
     }
 
     /**
      * Set up event listeners
      */
     setupEventListeners() {
-        if (this.locationDropdown) {
-            this.locationDropdown.addEventListener('change', (e) => {
-                this.selectLocation(e.target.value);
+        if (this.locationBtns) {
+            this.locationBtns.addEventListener('click', (e) => {
+                const btn = e.target.closest('.map-region-btn');
+                if (!btn) return;
+                this.setActiveLocationBtn(btn.dataset.value);
+                this.selectLocation(btn.dataset.value);
             });
         }
     }

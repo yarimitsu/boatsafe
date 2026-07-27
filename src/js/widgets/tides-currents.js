@@ -24,9 +24,12 @@ class TidesCurrents {
         this.currentDropdown = document.getElementById('current-station-dropdown');
         this.currentDataContainer = this.container.querySelector('.current-data-container');
 
-        this.dateNavigation = this.container.querySelector('.date-navigation');
+        this.tideDateNav = this.container.querySelector('.tide-date-navigation');
+        this.currentDateNav = this.container.querySelector('.current-date-navigation');
 
-        this.currentDate = new Date();
+        // Tides and currents each have their own independent date.
+        this.tideDate = new Date();
+        this.currentsDate = new Date();
         this.currentTideStationId = null;
         this.currentCurrentStationId = null;
         this.tideStations = null;
@@ -40,7 +43,7 @@ class TidesCurrents {
     async init() {
         try {
             this.setupToggleButton();
-            this.renderDateNavigation();
+            this.renderDateScrollers();
             await this.loadStations();
             this.setupEventListeners();
             await this.initMap();
@@ -140,7 +143,7 @@ class TidesCurrents {
         }
         this.currentDropdown.value = id;
 
-        this.loadCurrentData(id, this.currentDate);
+        this.loadCurrentData(id, this.currentsDate);
     }
 
     updateCurrentDropdown(visibleIds) {
@@ -219,7 +222,7 @@ class TidesCurrents {
         }
         this.tideDropdown.value = id;
 
-        this.loadTideData(id, this.currentDate);
+        this.loadTideData(id, this.tideDate);
     }
 
     updateTideDropdown(visibleIds) {
@@ -280,17 +283,8 @@ class TidesCurrents {
             });
         }
 
-        this.container.addEventListener('click', (e) => {
-            if (e.target.classList.contains('prev-day')) {
-                this.navigateDate(-1);
-            } else if (e.target.classList.contains('next-day')) {
-                this.navigateDate(1);
-            } else if (e.target.classList.contains('today-btn')) {
-                this.currentDate = new Date();
-                this.updateDateNavigation();
-                this.reloadForDate();
-            }
-        });
+        this.setupDateScroller(this.tideDateNav, 'tide');
+        this.setupDateScroller(this.currentDateNav, 'currents');
     }
 
     /* ---------------- Tide data ---------------- */
@@ -693,39 +687,49 @@ class TidesCurrents {
 
     /* ---------------- Date navigation ---------------- */
 
-    navigateDate(direction) {
-        const newDate = new Date(this.currentDate);
-        newDate.setDate(newDate.getDate() + direction);
-        this.currentDate = newDate;
-        this.updateDateNavigation();
-        this.reloadForDate();
+    renderDateScrollers() {
+        this.renderDateScroller(this.tideDateNav, this.tideDate);
+        this.renderDateScroller(this.currentDateNav, this.currentsDate);
     }
 
-    reloadForDate() {
-        if (this.currentTideStationId) {
-            this.loadTideData(this.currentTideStationId, this.currentDate);
-        }
-        if (this.currentCurrentStationId) {
-            this.loadCurrentData(this.currentCurrentStationId, this.currentDate);
-        }
-    }
-
-    renderDateNavigation() {
-        this.dateNavigation.innerHTML = `
+    renderDateScroller(container, date) {
+        if (!container) return;
+        container.innerHTML = `
             <div class="date-navigation-controls">
                 <button class="prev-day nav-button" title="Previous day">&#9664;</button>
-                <span class="current-date">${this.formatDateDisplay(this.currentDate)}</span>
+                <span class="current-date">${this.formatDateDisplay(date)}</span>
                 <button class="next-day nav-button" title="Next day">&#9654;</button>
                 <button class="today-btn nav-button" title="Jump to today">Today</button>
             </div>
         `;
     }
 
-    updateDateNavigation() {
-        const currentDateSpan = this.container.querySelector('.current-date');
-        if (currentDateSpan) {
-            currentDateSpan.textContent = this.formatDateDisplay(this.currentDate);
+    // Delegated click handling so the buttons can be re-rendered freely.
+    setupDateScroller(container, which) {
+        if (!container) return;
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('prev-day')) this.changeDate(which, -1);
+            else if (e.target.classList.contains('next-day')) this.changeDate(which, 1);
+            else if (e.target.classList.contains('today-btn')) this.changeDate(which, 0, true);
+        });
+    }
+
+    changeDate(which, direction, toToday = false) {
+        if (which === 'tide') {
+            this.tideDate = toToday ? new Date() : this.addDays(this.tideDate, direction);
+            this.renderDateScroller(this.tideDateNav, this.tideDate);
+            if (this.currentTideStationId) this.loadTideData(this.currentTideStationId, this.tideDate);
+        } else {
+            this.currentsDate = toToday ? new Date() : this.addDays(this.currentsDate, direction);
+            this.renderDateScroller(this.currentDateNav, this.currentsDate);
+            if (this.currentCurrentStationId) this.loadCurrentData(this.currentCurrentStationId, this.currentsDate);
         }
+    }
+
+    addDays(date, n) {
+        const d = new Date(date);
+        d.setDate(d.getDate() + n);
+        return d;
     }
 
     /* ---------------- Formatting & states ---------------- */

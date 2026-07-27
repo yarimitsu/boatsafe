@@ -96,4 +96,7 @@ fs.copyFileSync(path.join(srcDir, 'manifest.json'), path.join(buildDir, 'manifes
 // Copy service worker to the site root so its scope covers the whole app
 fs.copyFileSync(path.join(srcDir, 'sw.js'), path.join(buildDir, 'sw.js'));
 
+// Copy the standalone disclaimer page (self-contained, no build rewrite needed)
+fs.copyFileSync(path.join(srcDir, 'disclaimer.html'), path.join(buildDir, 'disclaimer.html'));
+
 console.log('Build process started...');

@@ -17,7 +17,7 @@ class WeatherWidget {
         this.content = this.container.querySelector('.weather-content');
         this.display = this.container.querySelector('.weather-display');
         this.toggleButton = document.getElementById('weather-toggle');
-        this.regionDropdown = document.getElementById('weather-region-dropdown');
+        this.regionBtns = this.container.querySelector('.weather-region-btns');
         this.isExpanded = true;
         this.region = 'all';
         this.alerts = [];
@@ -46,9 +46,13 @@ class WeatherWidget {
     }
 
     setupRegionSelector() {
-        if (!this.regionDropdown) return;
-        this.regionDropdown.addEventListener('change', (e) => {
-            this.region = e.target.value || 'all';
+        if (!this.regionBtns) return;
+        this.regionBtns.addEventListener('click', (e) => {
+            const btn = e.target.closest('.map-region-btn');
+            if (!btn) return;
+            this.regionBtns.querySelectorAll('.map-region-btn')
+                .forEach(b => b.classList.toggle('active', b === btn));
+            this.region = btn.dataset.value || 'all';
             this.render();
         });
     }

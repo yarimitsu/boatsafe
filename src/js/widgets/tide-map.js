@@ -13,7 +13,6 @@ class TideMap {
 
         this.svg = null;
         this.dotsGroup = null;
-        this.labelsGroup = null;
         this.dots = new Map();                  // id -> circle element
         this.pos = new Map();                   // id -> [x, y] world coords
         this.selectedId = null;
@@ -128,10 +127,6 @@ class TideMap {
         }
         svg.appendChild(this.dotsGroup);
 
-        this.labelsGroup = document.createElementNS(NS, 'g');
-        this.labelsGroup.setAttribute('class', 'map-labels');
-        svg.appendChild(this.labelsGroup);
-
         this.container.appendChild(svg);
         this.svg = svg;
     }
@@ -238,27 +233,8 @@ class TideMap {
 
     commit() {
         const ids = this.visibleStations();
-        this.updateLabels(ids);
         this.updateDotGeometry();
         this.onViewChange(ids);
-    }
-
-    updateLabels(visibleIds) {
-        while (this.labelsGroup.firstChild) this.labelsGroup.removeChild(this.labelsGroup.firstChild);
-        // Labels only when sparse enough to stay legible
-        if (visibleIds.length > 28 || this.view.w > this.world.w * 0.45) return;
-        const NS = 'http://www.w3.org/2000/svg';
-        const wpp = this.worldPerPx();
-        for (const id of visibleIds) {
-            const [x, y] = this.pos.get(id);
-            const t = document.createElementNS(NS, 'text');
-            t.setAttribute('x', (x + 8 * wpp).toFixed(1));
-            t.setAttribute('y', (y + 4 * wpp).toFixed(1));
-            t.setAttribute('font-size', (11 * wpp).toFixed(2));
-            t.setAttribute('class', 'map-station-label');
-            t.textContent = this.stations[id].name;
-            this.labelsGroup.appendChild(t);
-        }
     }
 
     setSelected(id) {
