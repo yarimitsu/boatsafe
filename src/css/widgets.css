@@ -2042,3 +2042,375 @@
         font-size: var(--font-size-xs);
     }
 }
+
+/* Tide Station Map Picker */
+.tide-map-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4);
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(15, 37, 53, 0.2);
+    backdrop-filter: blur(5px);
+}
+
+.tide-map-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+}
+
+.map-region-btn {
+    background: none;
+    border: var(--border-width) solid var(--glass-border);
+    color: var(--text-primary);
+    padding: var(--spacing-1) var(--spacing-3);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    transition: all var(--transition-fast);
+}
+
+.map-region-btn:hover {
+    border-color: var(--primary-color);
+}
+
+.map-region-btn.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--button-text-dark);
+    font-weight: 600;
+}
+
+.tide-map {
+    width: 100%;
+    height: 420px;
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(13, 44, 64, 0.55); /* reads as water */
+    overflow: hidden;
+}
+
+.tide-map-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none; /* the map handles its own pan/pinch */
+    cursor: grab;
+}
+
+.tide-map-svg:active {
+    cursor: grabbing;
+}
+
+.map-land path {
+    fill: rgba(165, 216, 255, 0.12);
+    stroke: rgba(165, 216, 255, 0.35);
+    stroke-width: 1px;
+}
+
+.map-station {
+    fill: #3a93dd;
+    stroke: #0d2c40;
+    cursor: pointer;
+}
+
+.map-station.selected {
+    fill: #f0f8ff;
+    stroke: #3a93dd;
+}
+
+.map-station-label {
+    fill: var(--text-primary);
+    font-family: var(--font-family);
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: rgba(13, 44, 64, 0.85);
+    stroke-width: 3px;
+    pointer-events: none;
+}
+
+/* Tide Curve Plot */
+.tide-plot-wrap {
+    position: relative;
+    margin-bottom: var(--spacing-2);
+}
+
+.tide-plot {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.tide-plot:focus {
+    outline: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+}
+
+.tide-plot-grid line {
+    stroke: rgba(240, 248, 255, 0.09);
+    stroke-width: 1px;
+}
+
+.tide-plot-axis {
+    fill: var(--text-muted);
+    font-size: 10px;
+    font-family: var(--font-family);
+}
+
+.tide-plot-area {
+    fill: #3a93dd;
+    opacity: 0.1;
+    stroke: none;
+}
+
+.tide-plot-line {
+    fill: none;
+    stroke: #3a93dd;
+    stroke-width: 2px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.tide-plot-now {
+    stroke: var(--primary-color);
+    stroke-width: 1px;
+    opacity: 0.55;
+}
+
+.tide-plot-now-label {
+    fill: var(--text-secondary);
+    font-size: 9px;
+    font-family: var(--font-family);
+}
+
+.tide-plot-event {
+    fill: #3a93dd;
+    stroke: #0d2c40;
+    stroke-width: 2px;
+}
+
+.tide-plot-event-value {
+    fill: var(--text-primary);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-family);
+}
+
+.tide-plot-event-time {
+    fill: var(--text-secondary);
+    font-size: 9.5px;
+    font-family: var(--font-family);
+}
+
+.tide-plot-cross line {
+    stroke: var(--text-secondary);
+    stroke-width: 1px;
+    opacity: 0.6;
+}
+
+.tide-plot-cross circle {
+    fill: #3a93dd;
+    stroke: #f0f8ff;
+    stroke-width: 2px;
+}
+
+.tide-plot-tooltip {
+    position: absolute;
+    transform: translate(12px, -50%);
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-1) var(--spacing-2);
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(13, 44, 64, 0.92);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 5;
+}
+
+.tide-plot-tooltip.flip {
+    transform: translate(calc(-100% - 12px), -50%);
+}
+
+.tide-plot-tooltip strong {
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.tide-plot-tooltip span {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+}
+
+.tide-plot-note {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    margin-bottom: var(--spacing-2);
+}
+
+@media (max-width: 768px) {
+    .tide-map {
+        height: 320px;
+    }
+
+    .tide-map-section {
+        padding: var(--spacing-3);
+    }
+
+    .map-region-btn {
+        font-size: var(--font-size-xs);
+        padding: var(--spacing-1) var(--spacing-2);
+    }
+}
+
+/* Alert severity badges (api.weather.gov alerts) */
+.warning-status.severity-extreme,
+.warning-status.severity-severe {
+    background-color: var(--error-red);
+    color: #fff;
+}
+.warning-status.severity-moderate {
+    background-color: var(--warning-orange);
+    color: var(--button-text-dark);
+}
+.warning-status.severity-minor {
+    background-color: var(--secondary-color);
+    color: var(--button-text-dark);
+}
+.warning-status.severity-unknown {
+    background-color: var(--text-muted);
+    color: var(--button-text-dark);
+}
+.warning-box.severity-extreme,
+.warning-box.severity-severe {
+    border-left: 4px solid var(--error-red);
+}
+.warning-box.severity-moderate {
+    border-left: 4px solid var(--warning-orange);
+}
+
+/* SEAK observation tables (Marine Exchange + NWS roundup) */
+.obs-section {
+    margin-bottom: var(--spacing-5);
+}
+.obs-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--primary-light);
+    margin-bottom: var(--spacing-2);
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: var(--spacing-2);
+}
+.obs-updated {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-2);
+}
+.obs-table-wrap {
+    overflow: auto;
+    max-height: 440px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    -webkit-overflow-scrolling: touch;
+}
+.obs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+    font-variant-numeric: tabular-nums;
+}
+.obs-table th,
+.obs-table td {
+    padding: var(--spacing-2) var(--spacing-3);
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--glass-border);
+}
+.obs-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #16384f;
+    color: var(--text-primary);
+    font-weight: 600;
+    line-height: 1.1;
+    z-index: 1;
+}
+.obs-table th:first-child,
+.obs-table td.obs-site {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background-color: #123049;
+}
+.obs-table thead th:first-child {
+    z-index: 2;
+}
+.obs-table td.obs-site {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+.obs-table tbody tr:nth-child(even) td {
+    background-color: rgba(15, 37, 53, 0.35);
+}
+.obs-table tbody tr:nth-child(even) td.obs-site {
+    background-color: #0f2b42;
+}
+.obs-table tbody tr:hover td {
+    background-color: rgba(165, 216, 255, 0.08);
+}
+.obs-link {
+    margin-top: var(--spacing-2);
+    font-size: var(--font-size-sm);
+}
+
+/* Tides & Currents — stacked full-width sections (tides, then currents) */
+.tc-section {
+    padding: var(--spacing-4);
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(15, 37, 53, 0.2);
+    backdrop-filter: blur(5px);
+    margin-bottom: var(--spacing-4);
+}
+.map-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+}
+.tc-map {
+    width: 100%;
+    height: 380px;
+    border: var(--border-width) solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background-color: rgba(13, 44, 64, 0.55); /* reads as water */
+    overflow: hidden;
+    margin-bottom: var(--spacing-3);
+}
+.tc-selector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+}
+.tc-section .tide-data-container,
+.tc-section .current-data-container {
+    margin-top: 0;
+    min-height: 0;
+}
+
+@media (max-width: 768px) {
+    .tc-section {
+        padding: var(--spacing-3);
+    }
+    .tc-map {
+        height: 300px;
+    }
+    .map-region-btn {
+        font-size: var(--font-size-xs);
+        padding: var(--spacing-1) var(--spacing-2);
+    }
+}

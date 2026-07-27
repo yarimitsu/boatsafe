@@ -21,7 +21,7 @@
     <meta name="twitter:image" content="https://boatsafe.oceanbight.com/oceanbightlogo.png">
     
     <!-- Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://tgftp.nws.noaa.gov https://tidesandcurrents.noaa.gov https://api.weather.gov https://www.ndbc.noaa.gov https://forecast.weather.gov https://www.weather.gov; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.tidesandcurrents.noaa.gov https://api.weather.gov https://www.weather.gov; img-src 'self' data:;">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -100,14 +100,8 @@
                             </button>
                         </h2>
                         <div class="observations-content collapsible-content" id="observations-content">
-                            <div class="station-selector">
-                                <label for="station-dropdown" class="dropdown-label">Select observation station:</label>
-                                <select id="station-dropdown" class="station-dropdown">
-                                    <option value="">Select a station...</option>
-                                </select>
-                            </div>
                             <div class="observations-display">
-                                <div class="loading">Select a station to view observations</div>
+                                <div class="loading">Loading Southeast Alaska observations...</div>
                             </div>
                         </div>
                     </div>
@@ -130,41 +124,79 @@
                             <div class="date-navigation">
                                 <!-- Navigation will be inserted here by JavaScript -->
                             </div>
-                            
-                            <!-- Dual Data Sections -->
-                            <div class="dual-sections">
-                                <!-- Tides Section -->
-                                <div class="tides-section">
-                                    <h3 class="section-title">Tides</h3>
-                                    <div class="tide-location-selector">
-                                        <label for="tide-station-dropdown" class="dropdown-label">Select tide station:</label>
-                                        <select id="tide-station-dropdown" class="station-dropdown">
-                                            <option value="">Select a station...</option>
-                                        </select>
-                                    </div>
-                                    <div class="tide-data-container">
-                                        <div class="loading">Select a tide station to view data</div>
-                                    </div>
+
+                            <!-- Tides -->
+                            <div class="tc-section">
+                                <h3 class="section-title">Tides</h3>
+                                <div class="map-controls tide-map-controls" role="group" aria-label="Zoom tide map to region">
+                                    <button class="map-region-btn active" data-region="all">All Alaska</button>
+                                    <button class="map-region-btn" data-region="se">Southeast</button>
+                                    <button class="map-region-btn" data-region="sc">Southcentral</button>
+                                    <button class="map-region-btn" data-region="sw">Aleutians</button>
+                                    <button class="map-region-btn" data-region="nw">West &amp; Arctic</button>
                                 </div>
-                                
-                                <!-- Currents Section -->
-                                <div class="currents-section">
-                                    <h3 class="section-title">Currents</h3>
-                                    <div class="current-location-selector">
-                                        <label for="current-station-dropdown" class="dropdown-label">Select current station:</label>
-                                        <select id="current-station-dropdown" class="station-dropdown">
-                                            <option value="">Select a station...</option>
-                                        </select>
-                                    </div>
-                                    <div class="current-data-container">
-                                        <div class="loading">Select a current station to view data</div>
-                                    </div>
+                                <div id="tide-map" class="tc-map"></div>
+                                <div class="tc-selector">
+                                    <label for="tide-station-dropdown" class="dropdown-label">Tide station (map filters this list):</label>
+                                    <select id="tide-station-dropdown" class="station-dropdown">
+                                        <option value="">Select a station...</option>
+                                    </select>
+                                </div>
+                                <div class="tide-data-container">
+                                    <div class="loading">Tap a station on the map or pick from the list to view tides</div>
+                                </div>
+                            </div>
+
+                            <!-- Currents -->
+                            <div class="tc-section">
+                                <h3 class="section-title">Currents</h3>
+                                <div class="map-controls current-map-controls" role="group" aria-label="Zoom current map to region">
+                                    <button class="map-region-btn active" data-region="all">All Alaska</button>
+                                    <button class="map-region-btn" data-region="se">Southeast</button>
+                                    <button class="map-region-btn" data-region="sc">Southcentral</button>
+                                    <button class="map-region-btn" data-region="sw">Aleutians</button>
+                                </div>
+                                <div id="current-map" class="tc-map"></div>
+                                <div class="tc-selector">
+                                    <label for="current-station-dropdown" class="dropdown-label">Current station (map filters this list):</label>
+                                    <select id="current-station-dropdown" class="station-dropdown">
+                                        <option value="">Select a station...</option>
+                                    </select>
+                                </div>
+                                <div class="current-data-container">
+                                    <div class="loading">Tap a station on the map or pick from the list to view currents</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
+
+                <!-- Coastal Forecasts -->
+                <section class="widget-container">
+                    <div id="coastal-forecast" class="widget">
+                        <h2 class="widget-header">
+                            <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
+                            <span class="header-title">Coastal Forecasts</span>
+                            <button class="toggle-button" id="coastal-toggle" aria-expanded="true" aria-controls="coastal-forecast-content">
+                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                                </svg>
+                            </button>
+                        </h2>
+                        <div class="coastal-forecast-content collapsible-content" id="coastal-forecast-content">
+                            <div class="coastal-selector">
+                                <label for="coastal-location-dropdown" class="dropdown-label">Select location:</label>
+                                <select id="coastal-location-dropdown" class="location-dropdown">
+                                    <option value="">Select a location...</option>
+                                </select>
+                            </div>
+                            <div class="coastal-forecast-display">
+                                <div class="loading">Select a region to view coastal forecast</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 <!-- Forecaster Discussion -->
                 <section class="widget-container">
@@ -211,36 +243,6 @@
                         </div>
                     </div>
                 </section>
-
-                <!-- Coastal Forecasts -->
-                <section class="widget-container">
-                    <div id="coastal-forecast" class="widget">
-                        <h2 class="widget-header">
-                            <img src="oceanbightlogo.png" alt="Ocean Bight" class="widget-logo">
-                            <span class="header-title">Coastal Forecasts</span>
-                            <button class="toggle-button" id="coastal-toggle" aria-expanded="true" aria-controls="coastal-forecast-content">
-                                <svg class="chevron-icon expanded" viewBox="0 0 24 24" width="20" height="20">
-                                    <path fill="currentColor" d="M7 10l5 5 5-5z"/>
-                                </svg>
-                            </button>
-                        </h2>
-                        <div class="coastal-forecast-content collapsible-content" id="coastal-forecast-content">
-                            <div class="coastal-selector">
-                                <label for="coastal-region-dropdown" class="dropdown-label">Select forecast region:</label>
-                                <select id="coastal-region-dropdown" class="region-dropdown">
-                                    <option value="">Select a region...</option>
-                                </select>
-                                <label for="coastal-location-dropdown" class="dropdown-label">Select location:</label>
-                                <select id="coastal-location-dropdown" class="location-dropdown">
-                                    <option value="">Select a region first...</option>
-                                </select>
-                            </div>
-                            <div class="coastal-forecast-display">
-                                <div class="loading">Select a region to view coastal forecast</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
             </div>
         </main>
 
@@ -270,11 +272,10 @@
     <!-- JavaScript -->
     <script src="js/utils/cache.js"></script>
     <script src="js/utils/http.js"></script>
-    <script src="js/forecast-parser.js"></script>
-    <script src="js/widgets/location-selector.js"></script>
     <script src="js/widgets/forecast-summary.js"></script>
     <script src="js/widgets/discussion.js"></script>
     <script src="js/widgets/coastal-forecast.js"></script>
+    <script src="js/widgets/tide-map.js"></script>
     <script src="js/widgets/tides-currents.js"></script>
     <script src="js/widgets/seak-observations.js"></script>
     <script src="js/widgets/weather.js"></script>

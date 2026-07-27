@@ -53,15 +53,13 @@ fs.writeFileSync(path.join(buildDir, 'styles.min.css'), minifiedCSS.styles);
 const jsFiles = [
   path.join(srcDir, 'js/utils/cache.js'),
   path.join(srcDir, 'js/utils/http.js'),
-  path.join(srcDir, 'js/forecast-parser.js'),
-  path.join(srcDir, 'js/widgets/location-selector.js'),
   path.join(srcDir, 'js/widgets/forecast-summary.js'),
   path.join(srcDir, 'js/widgets/discussion.js'),
   path.join(srcDir, 'js/widgets/weather.js'),
   path.join(srcDir, 'js/widgets/seak-observations.js'),
   path.join(srcDir, 'js/widgets/coastal-forecast.js'),
+  path.join(srcDir, 'js/widgets/tide-map.js'),
   path.join(srcDir, 'js/widgets/tides-currents.js'),
-  path.join(srcDir, 'js/widgets/currents.js'),
   path.join(srcDir, 'js/app.js')
 ];
 
@@ -77,16 +75,16 @@ minify(combinedJS).then(result => {
   console.log('Build completed successfully!');
 }).catch(err => {
   console.error('Error minifying JavaScript:', err);
+  process.exit(1); // fail the CI build instead of publishing a broken bundle
 });
 
 // Copy data files
 const dataDir = path.join(buildDir, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 fs.copyFileSync(path.join(srcDir, 'data/zones.json'), path.join(dataDir, 'zones.json'));
-fs.copyFileSync(path.join(srcDir, 'data/endpoints.json'), path.join(dataDir, 'endpoints.json'));
-fs.copyFileSync(path.join(srcDir, 'data/tide-stations.json'), path.join(dataDir, 'tide-stations.json'));
-fs.copyFileSync(path.join(srcDir, 'data/seak-stations.json'), path.join(dataDir, 'seak-stations.json'));
-fs.copyFileSync(path.join(srcDir, 'data/current-stations.json'), path.join(dataDir, 'current-stations.json'));
+fs.copyFileSync(path.join(srcDir, 'data/ak-tide-stations.json'), path.join(dataDir, 'ak-tide-stations.json'));
+fs.copyFileSync(path.join(srcDir, 'data/ak-coastline.json'), path.join(dataDir, 'ak-coastline.json'));
+fs.copyFileSync(path.join(srcDir, 'data/ak-current-stations.json'), path.join(dataDir, 'ak-current-stations.json'));
 fs.copyFileSync(path.join(srcDir, 'data/coastal-stations.json'), path.join(dataDir, 'coastal-stations.json'));
 
 // Copy logo image
@@ -94,5 +92,8 @@ fs.copyFileSync(path.join(srcDir, 'oceanbightlogo.png'), path.join(buildDir, 'oc
 
 // Copy manifest.json
 fs.copyFileSync(path.join(srcDir, 'manifest.json'), path.join(buildDir, 'manifest.json'));
+
+// Copy service worker to the site root so its scope covers the whole app
+fs.copyFileSync(path.join(srcDir, 'sw.js'), path.join(buildDir, 'sw.js'));
 
 console.log('Build process started...');

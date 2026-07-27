@@ -5,7 +5,6 @@ class CoastalForecast {
     constructor() {
         this.container = document.getElementById('coastal-forecast');
         this.content = this.container.querySelector('.coastal-forecast-content');
-        this.regionDropdown = document.getElementById('coastal-region-dropdown');
         this.locationDropdown = document.getElementById('coastal-location-dropdown');
         this.forecastDisplay = this.container.querySelector('.coastal-forecast-display');
         this.currentData = null;
@@ -30,9 +29,9 @@ class CoastalForecast {
      */
     async loadStations() {
         try {
-            const response = await window.BoatSafe.http.get('./data/coastal-stations.json', { cacheTTL: 1440 });
+            const response = await window.BoatSafe.http.get('./data/coastal-stations.json', { skipCache: true, cacheTTL: 0 });
             this.stations = typeof response === 'string' ? JSON.parse(response) : response;
-            this.populateRegionDropdown();
+            this.initRegion();
         } catch (error) {
             console.error('Failed to load coastal stations:', error);
             this.showError('Failed to load coastal stations data');
@@ -40,22 +39,27 @@ class CoastalForecast {
     }
 
     /**
-     * Populate region dropdown
+     * Auto-select the (single) region and populate the location dropdown.
+     * There's only one region now, so no region picker is shown.
      */
-    populateRegionDropdown() {
-        if (!this.regionDropdown || !this.stations?.regions) return;
+    initRegion() {
+        const ids = Object.keys(this.stations?.regions || {});
+        if (ids.length === 0) return;
 
-        this.regionDropdown.innerHTML = '<option value="">Select a region...</option>';
-        
-        Object.entries(this.stations.regions).forEach(([regionId, region]) => {
-            const option = document.createElement('option');
-            option.value = regionId;
-            option.textContent = region.name;
-            this.regionDropdown.appendChild(option);
-        });
-        
-        // Restore saved region if available
-        this.restorePreferences();
+        this.currentRegion = ids[0];
+        this.populateLocationDropdown();
+        this.showLoading('Select a location to view forecast');
+
+        // Restore saved location, if it's still a valid zone
+        try {
+            const saved = localStorage.getItem('boatsafe_coastal_location');
+            if (saved && this.stations.regions[this.currentRegion].zones[saved]) {
+                this.locationDropdown.value = saved;
+                this.selectLocation(saved);
+            }
+        } catch (error) {
+            console.warn('Failed to restore coastal location:', error);
+        }
     }
 
     /**
@@ -65,7 +69,7 @@ class CoastalForecast {
         if (!this.locationDropdown || !this.currentRegion) return;
 
         // Clear existing options
-        this.locationDropdown.innerHTML = '<option value="">Select a zone...</option>';
+        this.locationDropdown.innerHTML = '<option value="">Select a location...</option>';
 
         // Add zones for current region
         if (this.stations?.regions[this.currentRegion]?.zones) {
@@ -82,44 +86,11 @@ class CoastalForecast {
      * Set up event listeners
      */
     setupEventListeners() {
-        if (this.regionDropdown) {
-            this.regionDropdown.addEventListener('change', (e) => {
-                const regionId = e.target.value;
-                this.selectRegion(regionId);
-            });
-        }
-        
         if (this.locationDropdown) {
             this.locationDropdown.addEventListener('change', (e) => {
-                const location = e.target.value;
-                this.selectLocation(location);
+                this.selectLocation(e.target.value);
             });
         }
-    }
-
-    /**
-     * Select a region and populate location dropdown
-     * @param {string} regionId - Region ID
-     */
-    selectRegion(regionId) {
-        if (!regionId || !this.stations?.regions[regionId]) {
-            this.locationDropdown.innerHTML = '<option value="">Select a region first...</option>';
-            this.showLoading('Select a region to view forecast');
-            return;
-        }
-
-        this.currentRegion = regionId;
-        this.populateLocationDropdown();
-        
-        // Save region preference
-        try {
-            localStorage.setItem('boatsafe_coastal_region', regionId);
-        } catch (error) {
-            console.warn('Failed to save region preference:', error);
-        }
-        
-        // Show zone selection message
-        this.showLoading('Select a zone to view forecast');
     }
 
     /**
@@ -134,55 +105,39 @@ class CoastalForecast {
 
         this.selectedLocation = zoneId;
         this.showLoading(`Loading coastal forecast for ${zoneId}...`);
-        
+
         try {
-            // Fetch forecast data for this region
-            const currentHost = window.location.origin;
-            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-            
-            let data;
-            if (isLocal) {
-                // Local development - show placeholder
-                const zoneName = this.stations.regions[this.currentRegion]?.zones[zoneId] || zoneId;
-                data = {
-                    properties: {
-                        updated: new Date().toISOString(),
-                        periods: [{
-                            name: 'Coastal Forecast',
-                            detailedForecast: `LOCAL DEVELOPMENT MODE\n\nCoastal forecast for ${zoneName} (${zoneId}) would appear here.\n\nDeploy to Netlify to see real coastal forecast data from:\nhttps://www.weather.gov/arh/lfpfcst.html?AJK=${zoneId}`,
-                            shortForecast: `Local dev mode - ${zoneId}`
-                        }]
-                    }
-                };
-            } else {
-                // Production - use Netlify function with zone-specific URL
-                const proxyUrl = `${currentHost}/.netlify/functions/coastal-forecast/${zoneId}`;
-                console.log(`Fetching coastal forecast for ${zoneId} from:`, proxyUrl);
-                const response = await fetch(proxyUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            // Structured land-zone forecast straight from api.weather.gov
+            // (CORS-enabled). Returns proper day/night periods; flatten them to
+            // text for the existing <pre> renderer.
+            const res = await window.BoatSafe.http.get(
+                `https://api.weather.gov/zones/forecast/${encodeURIComponent(zoneId)}/forecast`,
+                { cacheTTL: 30 });
+            const json = typeof res === 'string' ? JSON.parse(res) : res;
+            const props = json.properties || {};
+            const periods = props.periods || [];
+            if (!periods.length) throw new Error('No forecast periods available');
+
+            const text = periods
+                .map(p => `${p.name}\n${p.detailedForecast}`)
+                .join('\n\n');
+
+            this.currentData = {
+                properties: {
+                    updated: props.updated || new Date().toISOString(),
+                    periods: [{ name: 'Coastal Forecast', detailedForecast: text }]
                 }
-                data = await response.json();
-            }
-            
-            console.log('Received coastal forecast data:', data);
-            
-            if (data.properties && data.properties.periods) {
-                this.currentData = data;
-                this.renderZoneForecast(zoneId);
-                
-                // Save location preference
-                try {
-                    localStorage.setItem('boatsafe_coastal_location', zoneId);
-                } catch (error) {
-                    console.warn('Failed to save location preference:', error);
-                }
-            } else {
-                throw new Error('No forecast data received - invalid response structure');
+            };
+            this.renderZoneForecast(zoneId);
+
+            try {
+                localStorage.setItem('boatsafe_coastal_location', zoneId);
+            } catch (error) {
+                console.warn('Failed to save location preference:', error);
             }
         } catch (error) {
             console.error('Failed to load coastal forecast:', error);
-            this.showError(`Failed to load coastal forecast for ${this.currentRegion}: ${error.message}`);
+            this.showError(`Failed to load coastal forecast for ${zoneId}: ${error.message}`);
         }
     }
 
@@ -238,7 +193,7 @@ class CoastalForecast {
                 <strong>${zoneId} - ${zoneName}</strong>
                 <div class="forecast-meta">
                     <small>NOAA Update: ${this.formatDate(new Date(this.currentData.properties.updated))}</small>
-                    <a href="https://www.weather.gov/arh/lfpfcst.html?AJK=${zoneId}" target="_blank" rel="noopener" class="noaa-link">View NOAA Dataset →</a>
+                    <a href="https://forecast.weather.gov/MapClick.php?zoneid=${zoneId}" target="_blank" rel="noopener" class="noaa-link">View NOAA Dataset →</a>
                 </div>
             </div>
             <div class="zone-forecast">
@@ -250,30 +205,6 @@ class CoastalForecast {
             this.forecastDisplay.innerHTML = html;
         } else {
             this.content.innerHTML = html;
-        }
-    }
-
-    /**
-     * Restore saved preferences
-     */
-    restorePreferences() {
-        try {
-            const savedRegion = localStorage.getItem('boatsafe_coastal_region');
-            if (savedRegion && this.stations?.regions[savedRegion]) {
-                this.regionDropdown.value = savedRegion;
-                this.selectRegion(savedRegion);
-                
-                // Also restore saved location if available
-                setTimeout(() => {
-                    const savedLocation = localStorage.getItem('boatsafe_coastal_location');
-                    if (savedLocation) {
-                        this.locationDropdown.value = savedLocation;
-                        this.selectLocation(savedLocation);
-                    }
-                }, 100);
-            }
-        } catch (error) {
-            console.warn('Failed to restore preferences:', error);
         }
     }
 

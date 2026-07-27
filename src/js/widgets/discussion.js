@@ -170,25 +170,43 @@ class Discussion {
         this.showLoading();
 
         try {
-            const currentHost = window.location.origin;
-            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-            
-            if (isLocal) {
-                // Local development - show placeholder
-                this.showLocalDevPlaceholder(office);
-            } else {
-                // Production - fetch real data via Netlify function with office parameter
-                const proxyUrl = `${currentHost}/.netlify/functions/forecast-discussion?office=${encodeURIComponent(office)}`;
-                console.log(`Fetching forecast discussion for ${office} from:`, proxyUrl);
-                const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30 });
-                console.log('Received forecast discussion data:', data);
-                this.currentData = data;
-                this.render();
-            }
+            // Area Forecast Discussion straight from api.weather.gov (CORS-enabled,
+            // no proxy). Step 1: list AFD products for the office, newest first.
+            const list = Discussion.parseJson(
+                await window.BoatSafe.http.get(
+                    `https://api.weather.gov/products/types/AFD/locations/${encodeURIComponent(office)}`,
+                    { cacheTTL: 30 }));
+            const graph = (list && (list['@graph'] || list.features)) || [];
+            if (!graph.length) throw new Error('No discussion products available');
+            const latestId = graph[0].id || graph[0]['@id'];
+
+            // Step 2: fetch the latest product's text.
+            const product = Discussion.parseJson(
+                await window.BoatSafe.http.get(
+                    `https://api.weather.gov/products/${latestId}`, { cacheTTL: 30 }));
+
+            this.currentData = {
+                properties: {
+                    office,
+                    officeName: this.getOfficeName(office),
+                    text: product.productText || '',
+                    updated: product.issuanceTime,
+                    issuedTime: product.issuanceTime
+                        ? this.formatDate(new Date(product.issuanceTime))
+                        : null
+                }
+            };
+            this.render();
         } catch (error) {
             console.error('Failed to load forecast discussion:', error);
             this.showError(`Unable to load forecast discussion for ${this.getOfficeName(office)}`);
         }
+    }
+
+    // api.weather.gov replies with application/ld+json, which the http util does
+    // not auto-parse (its content-type check misses the "ld+" variant).
+    static parseJson(res) {
+        return typeof res === 'string' ? JSON.parse(res) : res;
     }
 
     /**

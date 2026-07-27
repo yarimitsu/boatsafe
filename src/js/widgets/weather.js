@@ -83,152 +83,101 @@ class WeatherWidget {
     }
 
     /**
-     * Load weather warnings from Netlify function
+     * Load active alerts directly from api.weather.gov (CORS-enabled, no proxy).
      */
     async loadWarnings() {
         try {
-            const currentHost = window.location.origin;
-            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-            
-            if (isLocal) {
-                // Local development - show placeholder
-                this.showLocalDevelopmentMessage();
-                return;
-            }
-
-            // Production - use Netlify function
-            const proxyUrl = `${currentHost}/.netlify/functions/weather-forecast`;
-            console.log('Fetching weather warnings from:', proxyUrl);
-            
-            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 15 }); // 15 minutes cache
-            
-            console.log('Received weather warnings data:', data);
-            console.log('Data structure:', {
-                hasWarnings: !!data.warnings,
-                warningsKeys: data.warnings ? Object.keys(data.warnings) : [],
-                warningsCount: data.warnings ? Object.keys(data.warnings).length : 0,
-                officeName: data.officeName,
-                updated: data.updated
-            });
-            
-            if (data.warnings) {
-                this.currentData = data;
-                this.renderWarnings();
-            } else {
-                console.error('Invalid response structure:', data);
-                throw new Error('No warnings data received - invalid response structure');
-            }
+            const res = await window.BoatSafe.http.get(
+                'https://api.weather.gov/alerts/active?area=AK', { cacheTTL: 10 });
+            // api.weather.gov sends application/geo+json, which the http util
+            // returns as a string (its content-type check misses "geo+")
+            const data = typeof res === 'string' ? JSON.parse(res) : res;
+            this.currentData = Array.isArray(data.features) ? data.features : [];
+            this.renderWarnings();
         } catch (error) {
-            console.error('Failed to load weather warnings:', error);
-            this.showError(`Failed to load weather warnings: ${error.message}`);
+            console.error('Failed to load weather alerts:', error);
+            this.showError(`Failed to load weather alerts: ${error.message}`);
         }
     }
 
     /**
-     * Render weather warnings in separate boxes
+     * Render active alerts as cards, most severe first.
      */
     renderWarnings() {
-        if (!this.currentData || !this.currentData.warnings) {
-            this.showError('No weather warnings data available');
-            return;
-        }
-
-        const { warnings, updated, officeName } = this.currentData;
-        
-        // Check if all warnings are empty/inactive
-        const activeWarnings = Object.values(warnings).filter(warning => warning.hasContent);
-        console.log(`Rendering ${Object.keys(warnings).length} total warnings, ${activeWarnings.length} active`);
-        
-        if (activeWarnings.length === 0) {
-            console.log('No active warnings to display');
-        }
-        
-        // Create header
+        const alerts = this.currentData || [];
         const headerHtml = `
             <div class="warnings-header">
                 <div class="office-info">
-                    <strong>${officeName}</strong>
+                    <strong>Alaska — Active Warnings &amp; Advisories</strong>
                     <div class="warning-meta">
-                        <span class="last-updated">NOAA Update: ${this.formatDate(new Date(updated))}</span>
-                        <a href="https://www.weather.gov/ajk/MarineAdvisories" target="_blank" rel="noopener" class="noaa-link">View NOAA Dataset →</a>
+                        <span class="last-updated">${alerts.length} active · checked ${this.formatDate(new Date())}</span>
+                        <a href="https://www.weather.gov/safety" target="_blank" rel="noopener" class="noaa-link">NOAA alerts →</a>
                     </div>
                 </div>
             </div>
         `;
 
-        // Create warning boxes
-        const warningBoxes = Object.entries(warnings).map(([code, warning]) => {
-            return this.renderWarningBox(code, warning);
-        }).join('');
+        if (alerts.length === 0) {
+            this.content.innerHTML = headerHtml +
+                '<div class="status-message status-info">No active warnings or advisories for Alaska.</div>';
+            return;
+        }
 
-        const html = headerHtml + '<div class="warnings-grid">' + warningBoxes + '</div>';
-        
-        this.content.innerHTML = html;
+        const rank = WeatherWidget.SEVERITY_RANK;
+        const sorted = [...alerts].sort((a, b) => {
+            const bySeverity = (rank[b.properties.severity] || 0) - (rank[a.properties.severity] || 0);
+            if (bySeverity) return bySeverity;
+            return new Date(b.properties.effective || 0) - new Date(a.properties.effective || 0);
+        });
+
+        this.content.innerHTML = headerHtml +
+            '<div class="warnings-grid">' + sorted.map(a => this.renderWarningBox(a)).join('') + '</div>';
     }
 
     /**
-     * Render individual warning box
-     * @param {string} code - Warning code (NPW, WSW, etc.)
-     * @param {Object} warning - Warning data
-     * @returns {string} HTML string
+     * Render a single alert card from an api.weather.gov alert feature.
      */
-    renderWarningBox(code, warning) {
-        const { name, content, timestamp, hasContent } = warning;
-        
-        // Determine box status
-        const status = hasContent ? 'active' : 'inactive';
-        const statusText = hasContent ? 'ACTIVE' : 'No current warnings';
-        
-        // Clean and format content
-        const displayContent = hasContent ? this.formatWarningContent(content) : `No ${name.toLowerCase()} currently active.`;
-        
-        // Extract key information for summary
-        const summary = hasContent ? this.extractWarningSummary(content) : null;
-        
+    renderWarningBox(feature) {
+        const p = feature.properties || {};
+        const esc = WeatherWidget.escapeHtml;
+        const sev = p.severity || 'Unknown';
+        const sevClass = 'severity-' + sev.toLowerCase();
+
+        const desc = p.description ? esc(p.description).replace(/\n/g, '<br>') : '';
+        const instruction = p.instruction ? esc(p.instruction).replace(/\n/g, '<br>') : '';
+        const body = desc + (instruction
+            ? `<br><br><strong>Precautionary/preparedness actions:</strong><br>${instruction}` : '');
+
+        const effectiveWindow = (p.effective && p.expires)
+            ? `${this.formatDate(new Date(p.effective))} – ${this.formatDate(new Date(p.expires))}`
+            : '';
+
         return `
-            <div class="warning-box ${status}">
+            <div class="warning-box active ${sevClass}">
                 <div class="warning-header">
                     <div class="warning-title">
-                        <strong>${name}</strong>
-                        <span class="warning-code">${code}</span>
+                        <strong>${esc(p.event || 'Weather Alert')}</strong>
                     </div>
-                    <div class="warning-status ${status}">
-                        ${statusText}
-                    </div>
+                    <div class="warning-status ${sevClass}">${esc(sev)}</div>
                 </div>
-                
-                ${timestamp ? `
-                    <div class="warning-timestamp">
-                        <strong>Issued:</strong> ${timestamp}
-                    </div>
-                ` : ''}
-                
-                ${summary ? `
-                    <div class="warning-summary">
-                        ${summary}
-                    </div>
-                ` : ''}
-                
-                <div class="warning-content ${hasContent ? 'expandable' : ''}">
-                    <div class="content-text">
-                        ${displayContent}
-                    </div>
-                    ${hasContent ? `
-                        <button class="expand-btn" onclick="this.parentElement.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('expanded'))">
-                            <span class="expand-text">Show Full Text</span>
-                            <span class="collapse-text">Show Less</span>
-                        </button>
-                    ` : ''}
-                </div>
-                
-                <div class="warning-link">
-                    <a href="https://forecast.weather.gov/product.php?site=NWS&issuedby=AJK&product=${code}&format=txt&version=1&glossary=0" 
-                       target="_blank" rel="noopener">
-                        View on NOAA Website →
-                    </a>
+                ${p.areaDesc ? `<div class="warning-summary">${esc(p.areaDesc)}</div>` : ''}
+                ${effectiveWindow ? `<div class="warning-timestamp"><strong>In effect:</strong> ${effectiveWindow}</div>` : ''}
+                <div class="warning-content expandable">
+                    <div class="content-text">${body || 'No further detail provided.'}</div>
+                    <button class="expand-btn" onclick="this.parentElement.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('expanded'))">
+                        <span class="expand-text">Show Full Text</span>
+                        <span class="collapse-text">Show Less</span>
+                    </button>
                 </div>
             </div>
         `;
+    }
+
+    static SEVERITY_RANK = { Extreme: 4, Severe: 3, Moderate: 2, Minor: 1, Unknown: 0 };
+
+    static escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     /**

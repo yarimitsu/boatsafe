@@ -1,389 +1,233 @@
 /**
  * SEAK Observations Widget
- * Southeast Alaska Marine Observations from NOAA
+ * Shows two live observation tables for Southeast Alaska (no station picking):
+ *   - Marine Exchange of Alaska sites (allMarEx.json)
+ *   - NWS SE Alaska observation roundup (allSEAKobs.json)
+ * Both feeds are CORS-enabled on www.weather.gov and fetched directly.
+ * Mirrors https://www.weather.gov/ajk/MarineObservations
  */
 class SEAKObservations {
+    static MAREX_URL = 'https://www.weather.gov/source/ajk/obs/marex/allMarEx.json';
+    static ROUNDUP_URL = 'https://www.weather.gov/source/ajk/obs/roundup/allSEAKobs.json';
+    static DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+                   'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+
     constructor() {
         this.container = document.getElementById('observations');
         this.content = this.container.querySelector('.observations-content');
         this.toggleButton = document.getElementById('observations-toggle');
-        this.stationDropdown = document.getElementById('station-dropdown');
-        this.observationsDisplay = this.container.querySelector('.observations-display');
-        this.currentData = null;
-        this.selectedStation = null;
-        this.stations = null;
-        this.isExpanded = true; // Default to expanded
-        
+        this.display = this.container.querySelector('.observations-display');
+        this.isExpanded = true;
+
         this.init();
     }
 
-    /**
-     * Initialize the widget
-     */
     init() {
-        this.showLoading();
-        this.setupEventListeners();
-        this.loadStations();
+        this.setupToggleButton();
+        this.showLoading('Loading Southeast Alaska observations...');
+        this.loadObservations();
+        // Observations refresh often; reload every 10 minutes while visible.
+        setInterval(() => { if (!document.hidden) this.loadObservations(); }, 10 * 60 * 1000);
     }
 
-    /**
-     * Load stations data and populate station dropdown
-     */
-    async loadStations() {
-        try {
-            const response = await window.BoatSafe.http.get('./data/seak-stations.json', { cacheTTL: 1440 });
-            this.stations = typeof response === 'string' ? JSON.parse(response) : response;
-            this.populateStationDropdown();
-            
-            // Restore saved station if available
-            try {
-                const savedStation = localStorage.getItem('boatsafe_selected_seak_station');
-                if (savedStation && this.stationExists(savedStation)) {
-                    this.stationDropdown.value = savedStation;
-                    this.selectStation(savedStation);
-                }
-            } catch (error) {
-                console.warn('Failed to restore station preference:', error);
-            }
-        } catch (error) {
-            console.error('Failed to load stations:', error);
-        }
-    }
-
-    /**
-     * Populate station dropdown with regional subheadings
-     */
-    populateStationDropdown() {
-        if (!this.stationDropdown || !this.stations?.regions) return;
-
-        this.stationDropdown.innerHTML = '<option value="">Select a station...</option>';
-        
-        // Add regional subheadings and stations
-        Object.entries(this.stations.regions).forEach(([regionName, stations]) => {
-            // Add region header as disabled option
-            const regionHeader = document.createElement('option');
-            regionHeader.value = '';
-            regionHeader.textContent = `--- ${regionName} ---`;
-            regionHeader.disabled = true;
-            regionHeader.className = 'dropdown-header';
-            this.stationDropdown.appendChild(regionHeader);
-            
-            // Add stations in this region
-            Object.entries(stations).forEach(([stationId, stationName]) => {
-                const option = document.createElement('option');
-                option.value = stationId;
-                option.textContent = `  ${stationId} - ${stationName}`;
-                option.className = 'dropdown-option-indented';
-                this.stationDropdown.appendChild(option);
-            });
+    setupToggleButton() {
+        if (!this.toggleButton) return;
+        this.toggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.isExpanded = !this.isExpanded;
+            this.content.style.display = this.isExpanded ? 'block' : 'none';
+            this.toggleButton.setAttribute('aria-expanded', String(this.isExpanded));
+            const chevron = this.toggleButton.querySelector('.chevron-icon');
+            if (chevron) chevron.classList.toggle('expanded', this.isExpanded);
         });
     }
 
-    /**
-     * Get station name from regional structure
-     * @param {string} stationId - Station ID to look up
-     * @returns {string} Station name or ID if not found
-     */
-    getStationName(stationId) {
-        if (!this.stations?.regions) return stationId;
-        
-        for (const region of Object.values(this.stations.regions)) {
-            if (region[stationId]) {
-                return region[stationId];
-            }
-        }
-        return stationId;
-    }
-
-    /**
-     * Check if station exists in regional structure
-     * @param {string} stationId - Station ID to check
-     * @returns {boolean} True if station exists
-     */
-    stationExists(stationId) {
-        if (!this.stations?.regions) return false;
-        
-        for (const region of Object.values(this.stations.regions)) {
-            if (region[stationId]) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Set up event listeners
-     */
-    setupEventListeners() {
-        if (this.stationDropdown) {
-            this.stationDropdown.addEventListener('change', (e) => {
-                const stationId = e.target.value;
-                this.selectStation(stationId);
-            });
-        }
-    }
-
-    /**
-     * Select and display specific station observations
-     * @param {string} stationId - Station ID to display
-     */
-    async selectStation(stationId) {
-        if (!stationId) {
-            this.showLoading('Select a station to view observations');
-            return;
-        }
-
-        this.selectedStation = stationId;
-        this.showLoading('Loading observations...');
-        
+    async loadObservations() {
         try {
-            // Load observation data for the selected station
-            const currentHost = window.location.origin;
-            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-            
-            if (isLocal) {
-                // Local development - show placeholder
-                this.showLocalDevPlaceholder(stationId);
-            } else {
-                // Production - fetch real data via Netlify function
-                const proxyUrl = `${currentHost}/.netlify/functions/seak-observations`;
-                console.log('Fetching SEAK observations from:', proxyUrl);
-                
-                const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 10 });
-                const response = typeof data === 'string' ? JSON.parse(data) : data;
-                console.log('Received SEAK observations response:', response);
-                
-                if (response && response.status === 'success' && response.observations) {
-                    // Find the specific station data - check both 'stn' and 'stationId' fields
-                    const stationData = response.observations.find(obs => 
-                        obs.stationId === stationId || 
-                        obs.stn === stationId ||
-                        obs.stationName === stationId
-                    );
-                    
-                    if (stationData) {
-                        console.log('Found station data for', stationId, ':', stationData);
-                        this.renderStationObservations(stationData, response.timestamp);
-                    } else {
-                        console.warn('Station not found in observations data. Available stations:', response.observations.map(obs => obs.stn || obs.stationId));
-                        this.showError(`No data available for station ${stationId}. Station may be offline or not reporting current observations.`);
-                    }
-                } else {
-                    console.error('Invalid response format:', response);
-                    this.showError('Failed to load observation data - invalid response format');
-                }
+            const [marex, roundup] = await Promise.all([
+                this.fetchJson(SEAKObservations.MAREX_URL).catch(() => null),
+                this.fetchJson(SEAKObservations.ROUNDUP_URL).catch(() => null)
+            ]);
+
+            if (!marex && !roundup) {
+                this.showError('Observations are not available right now. Please try again later.');
+                return;
             }
-            
-            // Save station preference
-            try {
-                localStorage.setItem('boatsafe_selected_seak_station', stationId);
-            } catch (error) {
-                console.warn('Failed to save station preference:', error);
-            }
+
+            const html =
+                this.renderMarexTable(marex) +
+                this.renderRoundupTable(roundup);
+            this.display.innerHTML = html || '<div class="loading">No observation data available.</div>';
         } catch (error) {
-            console.error('Failed to load station observations:', error);
-            
-            // Provide more specific error messages based on error type
-            let errorMessage = 'Failed to load observations';
-            if (error.name === 'NetworkError' || error.message.includes('fetch')) {
-                errorMessage = 'Network error - please check your internet connection';
-            } else if (error.message.includes('timeout')) {
-                errorMessage = 'Request timed out - NOAA servers may be busy';
-            } else if (error.message.includes('JSON')) {
-                errorMessage = 'Invalid data format received from weather service';
-            } else {
-                errorMessage = `Failed to load observations: ${error.message}`;
-            }
-            
-            this.showError(errorMessage);
+            console.error('Failed to load observations:', error);
+            this.showError(`Failed to load observations: ${error.message}`);
         }
     }
 
-    /**
-     * Render station observations data
-     * @param {Object} stationData - Station observation data
-     * @param {string} timestamp - Data timestamp
-     */
-    renderStationObservations(stationData, timestamp) {
-        const stationId = stationData.stationId || stationData.stn;
-        const stationName = this.getStationName(stationId) || stationData.stationName || stationData.stnName || stationId;
-        
-        let observationLines = [];
-        
-        // Handle the NOAA data format - direct field mapping with appropriate units and labels
-        const dataFields = {
-            'temp': { label: 'Temperature', unit: '°F', format: (val) => parseFloat(val).toFixed(1) },
-            'dewPt': { label: 'Dew Point', unit: '°F', format: (val) => parseFloat(val).toFixed(1) },
-            'rh': { label: 'Relative Humidity', unit: '%', format: (val) => parseFloat(val).toFixed(1) },
-            'windSpd': { label: 'Wind Speed', unit: ' mph', format: (val) => parseFloat(val).toFixed(1) },
-            'windDir': { label: 'Wind Direction', unit: '', format: (val) => val },
-            'windGust': { label: 'Wind Gust', unit: ' mph', format: (val) => parseFloat(val).toFixed(1) },
-            'seaLevelPressure': { label: 'Sea Level Pressure', unit: ' mb', format: (val) => parseFloat(val).toFixed(1) },
-            'altimeter': { label: 'Pressure', unit: ' inHg', format: (val) => parseFloat(val).toFixed(2) },
-            'visibility': { label: 'Visibility', unit: ' mi', format: (val) => parseFloat(val).toFixed(1) },
-            'ceiling': { label: 'Ceiling', unit: ' ft', format: (val) => parseFloat(val).toFixed(0) },
-            'weather': { label: 'Weather Conditions', unit: '', format: (val) => val },
-            'sky': { label: 'Sky Conditions', unit: '', format: (val) => val },
-            'precip': { label: 'Precipitation', unit: ' in', format: (val) => parseFloat(val).toFixed(2) }
-        };
-        
-        // Process each available data field
-        Object.keys(dataFields).forEach(fieldKey => {
-            const fieldInfo = dataFields[fieldKey];
-            let value = stationData[fieldKey];
-            
-            // Handle both direct field access and the Netlify function's nested structure
-            if (stationData[fieldInfo.label] && typeof stationData[fieldInfo.label] === 'object') {
-                // Netlify function format: { value: x, unit: y }
-                value = stationData[fieldInfo.label].value;
-                const unit = stationData[fieldInfo.label].unit || fieldInfo.unit;
-                
-                if (value && value !== '-' && value !== '--' && value !== 'M' && value !== '') {
-                    try {
-                        let displayValue = fieldInfo.format(value);
-                        if (!isNaN(parseFloat(displayValue)) || fieldKey === 'windDir' || fieldKey === 'weather' || fieldKey === 'sky') {
-                            observationLines.push(
-                                `<div class="observation-line"><strong>${fieldInfo.label}:</strong> ${displayValue}${unit}</div>`
-                            );
-                        }
-                    } catch (error) {
-                        console.debug(`Skipping invalid value for ${fieldInfo.label}:`, value);
-                    }
-                }
-            } else if (value && value !== '-' && value !== '--' && value !== 'M' && value !== '') {
-                // Direct field format (raw NOAA data)
-                try {
-                    let displayValue = fieldInfo.format(value);
-                    if (!isNaN(parseFloat(displayValue)) || fieldKey === 'windDir' || fieldKey === 'weather' || fieldKey === 'sky') {
-                        observationLines.push(
-                            `<div class="observation-line"><strong>${fieldInfo.label}:</strong> ${displayValue}${fieldInfo.unit}</div>`
-                        );
-                    }
-                } catch (error) {
-                    console.debug(`Skipping invalid value for ${fieldKey}:`, value);
-                }
-            }
+    async fetchJson(url) {
+        const res = await window.BoatSafe.http.get(url, { cacheTTL: 10 });
+        return typeof res === 'string' ? JSON.parse(res) : res;
+    }
+
+    /* ---------------- Marine Exchange table (wind in knots) ---------------- */
+
+    renderMarexTable(data) {
+        const rows = (data && Array.isArray(data.marexData)) ? data.marexData : [];
+        if (rows.length === 0) return '';
+
+        rows.sort((a, b) => String(a.site).localeCompare(String(b.site)));
+
+        const body = rows.map(r => {
+            const reported = this.marexTime(r.date, r.time);
+            const wind = this.windText(this.degToCardinal(r.windDir), r.windSpd);
+            const gust = this.windText(this.degToCardinal(r.gustDir), r.gustSpd);
+            return `<tr>
+                <td class="obs-site">${this.esc(this.marexSite(r.site))}</td>
+                <td>${this.esc(reported)}</td>
+                <td>${this.num(r.temp, 0)}</td>
+                <td>${this.num(r.dewPt, 0)}</td>
+                <td>${this.num(r.rh, 0)}</td>
+                <td>${wind}</td>
+                <td>${gust}</td>
+                <td>${this.num(r.pressure, 0)}</td>
+            </tr>`;
+        }).join('');
+
+        return `
+            <div class="obs-section">
+                <h3 class="obs-title">Marine Exchange Observations</h3>
+                <div class="obs-table-wrap">
+                    <table class="obs-table">
+                        <thead><tr>
+                            <th>Site</th><th>Reported</th><th>Temp<br>&deg;F</th>
+                            <th>Dew Pt<br>&deg;F</th><th>RH<br>%</th>
+                            <th>Wind<br>kt</th><th>Gust<br>kt</th><th>Press<br>mb</th>
+                        </tr></thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    }
+
+    // Marine Exchange timestamps are UTC (date "MM/DD/YYYY", time "HH:MM").
+    marexTime(date, time) {
+        if (!date || !time) return '—';
+        const [mo, da, yr] = String(date).split('/').map(Number);
+        const [hh, mm] = String(time).split(':').map(Number);
+        if ([mo, da, yr, hh, mm].some(n => Number.isNaN(n))) return '—';
+        const d = new Date(Date.UTC(yr, mo - 1, da, hh, mm));
+        return d.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
         });
-        
-        const html = `
-            <div class="forecast-period">
-                <div class="period-header">
-                    <strong>${stationName}</strong>
-                    <span class="period-time">NOAA Update: ${this.formatDate(timestamp)}</span>
-                </div>
-                <div class="forecast-text observation-data">
-                    ${observationLines.length > 0 ? observationLines.join('') : '<div class="observation-line">No current observation data available for this station</div>'}
-                </div>
-                <div class="station-link">
-                    <a href="https://www.weather.gov/ajk/MarineObservations" target="_blank" rel="noopener">
-                        View All SEAK Marine Observations →
-                    </a>
-                </div>
-            </div>
-        `;
-        
-        if (this.observationsDisplay) {
-            this.observationsDisplay.innerHTML = html;
-        }
     }
 
-    /**
-     * Show local development placeholder
-     */
-    showLocalDevPlaceholder(stationId) {
-        const stationName = this.getStationName(stationId);
-        
-        const html = `
-            <div class="forecast-period">
-                <div class="period-header">
-                    <strong>${stationName}</strong>
-                    <span class="period-time">Local Development Mode</span>
-                </div>
-                <div class="forecast-text observation-data">
-                    <div class="observation-line"><strong>Temperature:</strong> 45.2°F</div>
-                    <div class="observation-line"><strong>Wind Speed:</strong> 8.5 mph</div>
-                    <div class="observation-line"><strong>Wind Direction:</strong> 240° SW</div>
-                    <div class="observation-line"><strong>Relative Humidity:</strong> 78%</div>
-                    <div class="observation-line">Deploy to Netlify to see real observation data</div>
-                </div>
-                <div class="station-link">
-                    <a href="https://www.weather.gov/ajk/MarineObservations" target="_blank" rel="noopener">
-                        View All SEAK Marine Observations →
-                    </a>
-                </div>
-            </div>
-        `;
-        
-        if (this.observationsDisplay) {
-            this.observationsDisplay.innerHTML = html;
-        }
+    // NWS page relabels this one site.
+    marexSite(site) {
+        return site === 'MENDENHALL VALLEY' ? 'INDUSTRIAL BLVD' : site;
     }
 
-    /**
-     * Show loading state
-     * @param {string} message - Loading message
-     */
+    /* ---------------- NWS roundup table (wind in mph) ---------------- */
+
+    renderRoundupTable(data) {
+        const rows = (data && Array.isArray(data.obData)) ? data.obData : [];
+        if (rows.length === 0) return '';
+
+        const updated = this.formatLocal(data.ts);
+        rows.sort((a, b) => String(a.stnName || a.stn).localeCompare(String(b.stnName || b.stn)));
+
+        const body = rows.map(r => {
+            const wind = this.windText(this.clean(r.windDir), r.windSpd);
+            const gust = this.num(r.windGust, 0);
+            const weather = this.clean(r.weather) !== '—' ? this.clean(r.weather) : this.clean(r.sky);
+            return `<tr>
+                <td class="obs-site">${this.esc(r.stnName || r.stn)}</td>
+                <td>${this.num(r.temp, 0)}</td>
+                <td>${wind}</td>
+                <td>${gust}</td>
+                <td>${this.num(r.seaLevelPressure, 0)}</td>
+                <td>${this.num(r.visibility, 1)}</td>
+                <td>${this.esc(weather)}</td>
+            </tr>`;
+        }).join('');
+
+        return `
+            <div class="obs-section">
+                <h3 class="obs-title">Southeast Alaska Observations</h3>
+                ${updated ? `<div class="obs-updated">NOAA update: ${this.esc(updated)}</div>` : ''}
+                <div class="obs-table-wrap">
+                    <table class="obs-table">
+                        <thead><tr>
+                            <th>Station</th><th>Temp<br>&deg;F</th><th>Wind<br>mph</th>
+                            <th>Gust<br>mph</th><th>Press<br>mb</th><th>Vis<br>mi</th><th>Wx</th>
+                        </tr></thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>
+                <div class="obs-link">
+                    <a href="https://www.weather.gov/ajk/MarineObservations" target="_blank" rel="noopener">
+                        All SE Alaska Marine Observations &rarr;
+                    </a>
+                </div>
+            </div>`;
+    }
+
+    /* ---------------- helpers ---------------- */
+
+    degToCardinal(deg) {
+        if (deg === null || deg === undefined || deg === '') return '';
+        const n = parseFloat(deg);
+        if (Number.isNaN(n)) return '';
+        return SEAKObservations.DIRS[Math.round(((n % 360) + 360) % 360 / 22.5) % 16];
+    }
+
+    windText(dir, spd) {
+        const s = this.num(spd, 0);
+        if (s === '—') return '—';
+        return `${dir ? dir + ' ' : ''}${s}`;
+    }
+
+    // Normalize NOAA "missing" markers to an em dash.
+    clean(v) {
+        if (v === null || v === undefined) return '—';
+        const s = String(v).trim();
+        return (s === '' || s === '-' || s === '--' || s === 'M') ? '—' : s;
+    }
+
+    num(v, digits) {
+        const c = this.clean(v);
+        if (c === '—') return '—';
+        const n = parseFloat(c);
+        return Number.isNaN(n) ? this.esc(c) : n.toFixed(digits);
+    }
+
+    formatLocal(ts) {
+        if (!ts) return '';
+        const clean = String(ts).replace(' Local', '');
+        const d = new Date(clean);
+        if (Number.isNaN(d.getTime())) return String(ts);
+        return d.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+        });
+    }
+
+    esc(s) {
+        return String(s).replace(/[&<>"']/g, c =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     showLoading(message = 'Loading...') {
-        if (this.observationsDisplay) {
-            this.observationsDisplay.innerHTML = `<div class="loading">${message}</div>`;
-        }
+        if (this.display) this.display.innerHTML = `<div class="loading">${message}</div>`;
     }
 
-    /**
-     * Show error state
-     * @param {string} message - Error message
-     */
     showError(message) {
-        if (this.observationsDisplay) {
-            this.observationsDisplay.innerHTML = `
-                <div class="status-message status-error">
-                    <strong>Error:</strong> ${message}
-                </div>
-            `;
+        if (this.display) {
+            this.display.innerHTML =
+                `<div class="status-message status-error"><strong>Error:</strong> ${this.esc(message)}</div>`;
         }
     }
 
-    /**
-     * Format date for display
-     * @param {string} dateString - Date string to format
-     * @returns {string} Formatted date
-     */
-    formatDate(dateString) {
-        if (!dateString) return 'Unknown';
-        
-        try {
-            // Handle NOAA timestamp format: "07/22/2025 08:00:33 Local"
-            let date;
-            if (dateString.includes('Local')) {
-                // Parse NOAA format
-                const dateOnly = dateString.replace(' Local', '');
-                date = new Date(dateOnly);
-            } else {
-                date = new Date(dateString);
-            }
-            
-            if (isNaN(date.getTime())) {
-                return dateString; // Return original if parsing fails
-            }
-            
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            console.debug('Date parsing error:', error, 'for date string:', dateString);
-            return dateString;
-        }
-    }
-
-    /**
-     * Clear widget content
-     */
     clear() {
-        this.selectedStation = null;
-        this.showLoading('Select a station to view observations');
+        this.showLoading('Loading Southeast Alaska observations...');
     }
 }
 

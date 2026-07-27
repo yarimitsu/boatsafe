@@ -1,3 +1,10 @@
+# Archived / retired files (kept locally, never shipped)
+archive/
+
+# Internal working notes (not part of the app)
+_status.md
+_migration-plan.md
+
 # Dependencies
 node_modules/
 npm-debug.log*

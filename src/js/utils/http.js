@@ -79,11 +79,15 @@ class HttpClient {
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         try {
+            // Only CORS-safelisted request headers here. A non-safelisted header
+            // (e.g. Cache-Control) forces a preflight OPTIONS, and NOAA's APIs
+            // don't allow that header in their preflight response — which makes
+            // every cross-origin GET fail with "Failed to fetch". Accept is
+            // safelisted, so these stay "simple" requests with no preflight.
             const response = await fetch(url, {
                 signal: controller.signal,
                 headers: {
-                    'Accept': 'application/json,text/plain',
-                    'Cache-Control': 'no-cache'
+                    'Accept': 'application/json,text/plain'
                 }
             });
 

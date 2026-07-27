@@ -4,9 +4,9 @@
   "description": "A Marine Forecast App for Alaska Waters",
   "main": "src/js/app.js",
   "scripts": {
+    "serve": "node scripts/serve.js",
     "start": "cd src && live-server --host=0.0.0.0 --port=3000 --entry-file=index.html",
     "build": "node scripts/build.js",
-    "deploy": "node scripts/deploy.js",
     "test": "jest",
     "lint": "eslint src/js/**/*.js",
     "format": "prettier --write src/js/**/*.js src/css/**/*.css"

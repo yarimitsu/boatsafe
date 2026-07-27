@@ -88,7 +88,7 @@ class ForecastSummary {
      */
     async loadZones() {
         try {
-            const response = await window.BoatSafe.http.get('./data/zones.json', { cacheTTL: 1440 });
+            const response = await window.BoatSafe.http.get('./data/zones.json', { skipCache: true, cacheTTL: 0 });
             this.zones = typeof response === 'string' ? JSON.parse(response) : response;
             this.populateRegionDropdown();
         } catch (error) {
@@ -214,75 +214,67 @@ class ForecastSummary {
 
         this.selectedZone = zoneId;
         this.showLoading(`Loading forecast for ${zoneId}...`);
-        
+
         try {
-            // Fetch forecast data for this specific zone
-            const currentHost = window.location.origin;
-            const isLocal = currentHost.includes('localhost') || currentHost.includes('127.0.0.1');
-            
-            let data;
-            if (isLocal) {
-                // Local development - fetch directly from NOAA (may have CORS issues)
-                const directUrl = this.getDirectNOAAUrl(zoneId);
-                console.log(`Local dev: fetching ${zoneId} directly from NOAA:`, directUrl);
-                
-                try {
-                    const response = await fetch(directUrl);
-                    const text = await response.text();
-                    data = {
-                        properties: {
-                            updated: new Date().toISOString(),
-                            periods: [{
-                                name: 'Marine Forecast',
-                                detailedForecast: text,
-                                shortForecast: `Marine conditions for zone ${zoneId.toUpperCase()}`
-                            }]
-                        }
-                    };
-                } catch (corsError) {
-                    console.warn('CORS error in local dev, showing placeholder:', corsError);
-                    data = {
-                        properties: {
-                            updated: new Date().toISOString(),
-                            periods: [{
-                                name: 'Marine Forecast',
-                                detailedForecast: `LOCAL DEVELOPMENT MODE\n\nForecast for ${zoneId} would appear here.\n\nDeploy to Netlify to see real forecast data.`,
-                                shortForecast: `Local dev mode - ${zoneId.toUpperCase()}`
-                            }]
-                        }
-                    };
+            // The Coastal Waters Forecast (CWF) text comes straight from
+            // api.weather.gov (CORS-enabled). One product covers a group of
+            // zones; extractZoneForecast() slices out this zone's section.
+            const loc = ForecastSummary.cwfLocation(zoneId);
+            if (!loc) throw new Error(`No CWF product mapped for zone ${zoneId}`);
+            const { text, issuanceTime } = await ForecastSummary.fetchCwfText(loc);
+
+            this.currentData = {
+                properties: {
+                    updated: issuanceTime || new Date().toISOString(),
+                    periods: [{ name: 'Marine Forecast', detailedForecast: text }]
                 }
-            } else {
-                // Production - use Netlify function
-                const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
-                console.log(`Fetching forecast for ${zoneId} from:`, proxyUrl);
-                const response = await fetch(proxyUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                data = await response.json();
-            }
-            
-            console.log('Received data:', data);
-            
-            if (data.properties && data.properties.periods) {
-                this.currentData = data;
-                this.renderZoneForecast(zoneId);
-                
-                // Save zone preference
-                try {
-                    localStorage.setItem('boatsafe_selected_zone', zoneId);
-                } catch (error) {
-                    console.warn('Failed to save zone preference:', error);
-                }
-            } else {
-                throw new Error('No forecast data received - invalid response structure');
+            };
+            this.renderZoneForecast(zoneId);
+
+            try {
+                localStorage.setItem('boatsafe_selected_zone', zoneId);
+            } catch (error) {
+                console.warn('Failed to save zone preference:', error);
             }
         } catch (error) {
             console.error('Failed to load zone forecast:', error);
-            console.error('Error details:', error.message);
             this.showError(`Failed to load forecast for ${zoneId}: ${error.message}`);
         }
+    }
+
+    // Which CWF product (by api.weather.gov location code) carries each marine
+    // zone. Derived from the NOAA product filenames (…cwf.ajk/aeg/yak/aer/alu).
+    static CWF_ZONES = {
+        AJK: ['PKZ098', 'PKZ011', 'PKZ012', 'PKZ013', 'PKZ021', 'PKZ022', 'PKZ031', 'PKZ032', 'PKZ033', 'PKZ034', 'PKZ035', 'PKZ036'],
+        AEG: ['PKZ641', 'PKZ661', 'PKZ642', 'PKZ662', 'PKZ643', 'PKZ663', 'PKZ644', 'PKZ664', 'PKZ651', 'PKZ671', 'PKZ652', 'PKZ672'],
+        YAK: ['PKZ053'],
+        AER: ['PKZ197', 'PKZ710', 'PKZ711', 'PKZ712', 'PKZ715', 'PKZ716', 'PKZ714', 'PKZ724', 'PKZ725', 'PKZ726', 'PKZ720', 'PKZ721', 'PKZ722', 'PKZ723', 'PKZ730', 'PKZ731', 'PKZ733', 'PKZ732', 'PKZ734', 'PKZ736', 'PKZ737', 'PKZ738', 'PKZ742', 'PKZ740', 'PKZ741'],
+        ALU: ['PKZ750', 'PKZ751', 'PKZ752', 'PKZ753', 'PKZ754', 'PKZ755', 'PKZ756', 'PKZ757', 'PKZ758', 'PKZ759', 'PKZ770', 'PKZ772', 'PKZ771', 'PKZ773', 'PKZ774', 'PKZ775', 'PKZ776', 'PKZ777', 'PKZ778', 'PKZ780', 'PKZ781', 'PKZ782']
+    };
+
+    static cwfLocation(zoneId) {
+        const z = zoneId.toUpperCase();
+        if (!ForecastSummary._cwfIndex) {
+            ForecastSummary._cwfIndex = {};
+            for (const [loc, zones] of Object.entries(ForecastSummary.CWF_ZONES)) {
+                for (const zz of zones) ForecastSummary._cwfIndex[zz] = loc;
+            }
+        }
+        return ForecastSummary._cwfIndex[z] || null;
+    }
+
+    // Fetch the latest CWF product text for a location: list products, then
+    // fetch the newest one's text. (api.weather.gov ld+json isn't auto-parsed.)
+    static async fetchCwfText(loc) {
+        const parse = r => (typeof r === 'string' ? JSON.parse(r) : r);
+        const list = parse(await window.BoatSafe.http.get(
+            `https://api.weather.gov/products/types/CWF/locations/${loc}`, { cacheTTL: 30 }));
+        const graph = (list && (list['@graph'] || list.features)) || [];
+        if (!graph.length) throw new Error(`No CWF product available for ${loc}`);
+        const id = graph[0].id || graph[0]['@id'];
+        const product = parse(await window.BoatSafe.http.get(
+            `https://api.weather.gov/products/${id}`, { cacheTTL: 30 }));
+        return { text: product.productText || '', issuanceTime: product.issuanceTime };
     }
 
     /**
@@ -572,95 +564,6 @@ class ForecastSummary {
         });
         
         return text;
-    }
-
-    /**
-     * Get direct NOAA URL for zone (for local development)
-     * @param {string} zoneId - Zone ID
-     * @returns {string} Direct NOAA URL
-     */
-    getDirectNOAAUrl(zoneId) {
-        const zoneToUrl = {
-            // SE Inner Coastal Waters
-            'PKZ098': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ011': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ012': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ013': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ021': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ022': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ031': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ032': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ033': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ034': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ035': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            'PKZ036': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt',
-            // SE Outside Coastal Waters
-            'PKZ641': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ661': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ642': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ662': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ643': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ663': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ644': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ664': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ651': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ671': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ652': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            'PKZ672': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pajk.cwf.aeg.txt',
-            // Yakutat Bay
-            'PKZ053': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak53.pajk.cwf.yak.txt',
-            // North Gulf Coast
-            'PKZ197': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ710': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ711': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ712': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ715': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ716': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ714': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ724': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ725': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ726': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ720': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ721': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ722': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ723': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ730': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ731': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ733': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ732': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ734': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ736': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ737': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ738': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ742': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ740': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            'PKZ741': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pafc.cwf.aer.txt',
-            // Southwest AK and Aleutians
-            'PKZ750': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ751': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ752': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ753': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ754': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ755': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ756': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ757': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ758': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ759': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ770': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ772': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ771': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ773': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ774': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ775': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ776': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ777': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ778': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ780': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ781': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt',
-            'PKZ782': 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak52.pafc.cwf.alu.txt'
-        };
-        
-        return zoneToUrl[zoneId.toUpperCase()] || 'https://tgftp.nws.noaa.gov/data/raw/fz/fzak51.pajk.cwf.ajk.txt';
     }
 
     /**

@@ -48,14 +48,12 @@ class BoatSafeApp {
      */
     async loadConfig() {
         try {
-            const [zonesResponse, endpointsResponse] = await Promise.all([
-                window.BoatSafe.http.get('./data/zones.json', { cacheTTL: 1440 }), // 24 hours
-                window.BoatSafe.http.get('./data/endpoints.json', { cacheTTL: 1440 })
-            ]);
-
+            // Local data file: don't cache in localStorage, or edits/deploys
+            // stay stale for the TTL. Same-origin + tiny; the HTTP cache and
+            // (in prod) the service worker handle caching.
+            const zonesResponse = await window.BoatSafe.http.get('./data/zones.json', { skipCache: true, cacheTTL: 0 });
             this.zones = typeof zonesResponse === 'string' ? JSON.parse(zonesResponse) : zonesResponse;
-            this.endpoints = typeof endpointsResponse === 'string' ? JSON.parse(endpointsResponse) : endpointsResponse;
-            
+
         } catch (error) {
             console.error('Failed to load configuration:', error);
             throw new Error('Configuration loading failed');
@@ -131,146 +129,10 @@ class BoatSafeApp {
         });
     }
 
-    /**
-     * Region selection handler
-     * @param {string} regionId - Selected region ID
-     */
-    onZoneSelected(regionId) {
-        console.log(`Region selected: ${regionId}, current region: ${this.currentRegion}`);
-        if (regionId === this.currentRegion) {
-            console.log('Same region selected, skipping reload');
-            return;
-        }
-        
-        this.currentRegion = regionId;
-        console.log(`Loading new region: ${regionId}`);
-        
-        // Save preference
-        try {
-            localStorage.setItem('boatsafe_selected_region', regionId);
-        } catch (error) {
-            console.warn('Failed to save region preference:', error);
-        }
-        
-        // Load forecast data for region
-        this.loadRegionForecastData(regionId);
-    }
-
-    /**
-     * Load forecast data for selected region
-     * @param {string} regionId - Region ID
-     */
-    async loadRegionForecastData(regionId) {
-        if (!regionId || !this.zones.regions[regionId]) {
-            console.error('Invalid region ID:', regionId);
-            return;
-        }
-
-        const region = this.zones.regions[regionId];
-        this.showStatus(`Loading forecast for ${region.name}...`, 'loading');
-
-        try {
-            // Load marine forecast for the region (using first zone to get the forecast file)
-            const firstZone = Object.keys(region.zones)[0];
-            const forecast = await this.loadRegionForecast(regionId, region, firstZone);
-            this.widgets.forecastSummary.updateRegion(region, forecast);
-
-            // Load other data with explicit error handling
-            const promises = [
-                this.loadDiscussion(region.office).catch(err => {
-                    console.warn('Discussion loading failed:', err);
-                    return { error: 'Discussion not available', type: 'discussion' };
-                }),
-                Promise.resolve({ success: true, type: 'tides-currents' }).catch(err => {
-                    console.warn('Tides/Currents widget is self-contained:', err);
-                    return { error: 'Tides/Currents widget handles its own data', type: 'tides-currents' };
-                }),
-                Promise.resolve({ success: true, type: 'observations' }).catch(err => {
-                    console.warn('Observations loading failed:', err);
-                    return { error: 'Observation data not available', type: 'observations' };
-                })
-            ];
-
-            const results = await Promise.allSettled(promises);
-
-            // Update widgets with results
-            results.forEach((result, index) => {
-                const widgetNames = ['Discussion', 'Tides & Currents', 'Observations'];
-                console.log(`Widget ${index} (${widgetNames[index]}): status=${result.status}, value=`, result.value);
-                
-                if (result.status === 'fulfilled' && result.value && !result.value.error) {
-                    switch (index) {
-                        case 0: // Discussion
-                            this.widgets.discussion.update(result.value);
-                            console.log('Updated discussion widget');
-                            break;
-                        case 1: // Tides & Currents
-                            // TidesCurrents widget handles its own initialization
-                            console.log('TidesCurrents widget is self-contained');
-                            break;
-                        case 2: // Observations
-                            // SEAK observations widget handles its own initialization
-                            console.log('SEAK observations widget is self-contained');
-                            break;
-                    }
-                } else {
-                    const errorMsg = result.value?.error || result.reason || 'Data not available';
-                    console.warn(`Failed to load data for widget ${index} (${widgetNames[index]}):`, errorMsg);
-                    
-                    // Show appropriate fallback for each widget
-                    switch (index) {
-                        case 0: // Discussion
-                            this.widgets.discussion.showError('Discussion not available - using cached forecast data');
-                            break;
-                        case 1: // Tides & Currents
-                            // TidesCurrents widget handles its own errors
-                            console.log('TidesCurrents widget handles its own errors');
-                            break;
-                        case 2: // Observations
-                            // SEAK observations widget handles its own errors
-                            console.log('SEAK observations widget handles its own errors');
-                            break;
-                    }
-                }
-            });
-
-            this.showStatus(`Loaded forecast for ${region.name}`, 'success');
-            
-        } catch (error) {
-            console.error('Failed to load forecast data:', error);
-            this.showStatus('Failed to load forecast', 'error');
-        }
-    }
-
-    /**
-     * Load region forecast
-     * @param {string} regionId - Region ID
-     * @param {Object} region - Region data
-     * @param {string} zoneId - Zone ID to fetch forecast for
-     * @returns {Promise} Parsed forecast data
-     */
-    async loadRegionForecast(regionId, region, zoneId) {
-        // Use current Netlify deployment proxy to get marine forecast data
-        const currentHost = window.location.origin;
-        const proxyUrl = `${currentHost}/.netlify/functions/marine-forecast/${zoneId.toUpperCase()}`;
-        
-        try {
-            console.log(`Fetching forecast for region ${regionId} via proxy:`, proxyUrl);
-            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 30, skipCache: false });
-            console.log(`Proxy request succeeded for ${regionId}:`, data);
-            
-            // Return the complete forecast data for zone parsing
-            if (data.properties && data.properties.periods) {
-                return data;
-            } else {
-                throw new Error('No forecast data in proxy response');
-            }
-            
-        } catch (error) {
-            console.error('Proxy request failed:', error);
-            throw new Error('Marine forecast data not available via proxy');
-        }
-    }
+    // Region/zone forecast orchestration used to live here and proxied through
+    // Netlify functions. Each widget now loads its own data directly from NOAA
+    // (see forecast-summary, discussion, seak-observations, tides-currents), so
+    // that central orchestration is gone.
 
     /**
      * Parse NOAA text forecast into individual periods
@@ -435,25 +297,6 @@ class BoatSafeApp {
 
 
     /**
-     * Load marine alerts from custom proxy
-     * @returns {Promise} Marine alerts data
-     */
-    async loadMarineAlerts() {
-        const currentHost = window.location.origin;
-        const proxyUrl = `${currentHost}/.netlify/functions/marine-alerts`;
-
-        try {
-            console.log('Fetching marine alerts via proxy:', proxyUrl);
-            const data = await window.BoatSafe.http.get(proxyUrl, { cacheTTL: 5 });
-            console.log('Marine alerts proxy request succeeded:', data);
-            return data;
-        } catch (error) {
-            console.error('Marine alerts proxy request failed:', error);
-            return { alerts: [], sources: [], error: 'Marine alerts not available' };
-        }
-    }
-
-    /**
      * Load tide data
      * @param {string} zoneId - Zone ID
      * @returns {Promise} Tide data
@@ -552,12 +395,8 @@ class BoatSafeApp {
             clearInterval(this.updateInterval);
         }
         
-        // Update every 30 minutes
-        this.updateInterval = setInterval(() => {
-            if (this.currentRegion && !document.hidden) {
-                this.loadRegionForecastData(this.currentRegion);
-            }
-        }, 30 * 60 * 1000);
+        // Each widget manages its own refresh; nothing to re-fetch centrally.
+        // The cycle is retained as a no-op hook for future app-level refreshes.
     }
 
     /**
@@ -621,6 +460,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.BoatSafe = window.BoatSafe || {};
     window.BoatSafe.app = new BoatSafeApp();
 });
+
+// Register the service worker for offline use (cached shell + last-known NOAA
+// data). Skipped on localhost so local development isn't served stale files.
+if ('serviceWorker' in navigator &&
+    !['localhost', '127.0.0.1'].includes(location.hostname)) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err =>
+            console.warn('Service worker registration failed:', err));
+    });
+}
 
 // Handle unhandled promise rejections
 window.addEventListener('unhandledrejection', (event) => {
