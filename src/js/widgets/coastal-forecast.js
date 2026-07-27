@@ -5,6 +5,8 @@ class CoastalForecast {
     constructor() {
         this.container = document.getElementById('coastal-forecast');
         this.content = this.container.querySelector('.coastal-forecast-content');
+        this.toggleButton = document.getElementById('coastal-toggle');
+        this.isExpanded = true;
         this.locationBtns = this.container.querySelector('.coastal-location-btns');
         this.forecastDisplay = this.container.querySelector('.coastal-forecast-display');
         this.currentData = null;
@@ -19,9 +21,22 @@ class CoastalForecast {
      * Initialize the widget
      */
     init() {
+        this.setupToggleButton();
         this.showLoading();
         this.setupEventListeners();
         this.loadStations();
+    }
+
+    setupToggleButton() {
+        if (!this.toggleButton) return;
+        this.toggleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.isExpanded = !this.isExpanded;
+            this.content.style.display = this.isExpanded ? 'block' : 'none';
+            this.toggleButton.setAttribute('aria-expanded', String(this.isExpanded));
+            const chevron = this.toggleButton.querySelector('.chevron-icon');
+            if (chevron) chevron.classList.toggle('expanded', this.isExpanded);
+        });
     }
 
     /**
