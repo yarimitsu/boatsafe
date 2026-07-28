@@ -699,7 +699,6 @@ class TidesCurrents {
                 <button class="prev-day nav-button" title="Previous day">&#9664;</button>
                 <span class="current-date">${this.formatDateDisplay(date)}</span>
                 <button class="next-day nav-button" title="Next day">&#9654;</button>
-                <button class="today-btn nav-button" title="Jump to today">Today</button>
             </div>
         `;
     }
@@ -710,17 +709,16 @@ class TidesCurrents {
         container.addEventListener('click', (e) => {
             if (e.target.classList.contains('prev-day')) this.changeDate(which, -1);
             else if (e.target.classList.contains('next-day')) this.changeDate(which, 1);
-            else if (e.target.classList.contains('today-btn')) this.changeDate(which, 0, true);
         });
     }
 
-    changeDate(which, direction, toToday = false) {
+    changeDate(which, direction) {
         if (which === 'tide') {
-            this.tideDate = toToday ? new Date() : this.addDays(this.tideDate, direction);
+            this.tideDate = this.addDays(this.tideDate, direction);
             this.renderDateScroller(this.tideDateNav, this.tideDate);
             if (this.currentTideStationId) this.loadTideData(this.currentTideStationId, this.tideDate);
         } else {
-            this.currentsDate = toToday ? new Date() : this.addDays(this.currentsDate, direction);
+            this.currentsDate = this.addDays(this.currentsDate, direction);
             this.renderDateScroller(this.currentDateNav, this.currentsDate);
             if (this.currentCurrentStationId) this.loadCurrentData(this.currentCurrentStationId, this.currentsDate);
         }
